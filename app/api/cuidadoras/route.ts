@@ -36,16 +36,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nome, email, telefone } = body;
+    const { nome, telefone, dataInicioTrabalho } = body;
 
-    if (!nome || !email) {
+    if (!nome || !telefone) {
       return NextResponse.json(
-        { error: 'Nome e email são obrigatórios' },
+        { error: 'Nome e telefone são obrigatórios' },
         { status: 400 }
       );
     }
 
-    const newCuidadora = addCuidadora({ nome, email, telefone });
+    const newCuidadora = addCuidadora({ nome, email: '', telefone, dataInicioTrabalho });
     return NextResponse.json(newCuidadora, { status: 201 });
   } catch (error) {
     return NextResponse.json(
@@ -86,8 +86,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const body = await request.json().catch(() => null);
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const id = body?.id || searchParams.get('id');
 
     if (!id) {
       return NextResponse.json(

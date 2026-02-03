@@ -4,6 +4,8 @@ export interface Cuidadora {
   email: string;
   telefone: string;
   dataCadastro: string;
+  dataInicioTrabalho?: string; // Data de início no padrão 48/48
+  arquivada?: boolean; // Se a cuidadora está arquivada
 }
 
 export interface Escala {
@@ -23,6 +25,7 @@ export interface ConfiguracaoHorarios {
   diasTrabalho: number[];
   horaInicioPadrao: string;
   horaFimPadrao: string;
+  padrao48h: boolean; // Se usa o padrão 48h trabalho / 48h folga
 }
 
 export interface User {
