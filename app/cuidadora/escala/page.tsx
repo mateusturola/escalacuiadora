@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Escala, ConfiguracaoHorarios } from "@/lib/types";
+import type { Escala, ConfiguracaoHorarios, Cuidadora } from "@/lib/types";
 
 export default function CuidadoraEscala() {
-  const [cuidadora, setCuidadora] = useState<any>(null);
+  const [cuidadora, setCuidadora] = useState<Cuidadora | null>(null);
   const [escalas, setEscalas] = useState<Escala[]>([]);
   const [config, setConfig] = useState<ConfiguracaoHorarios | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,7 +18,7 @@ export default function CuidadoraEscala() {
       return;
     }
 
-    const cuidadoraData = JSON.parse(storedCuidadora);
+    const cuidadoraData: Cuidadora = JSON.parse(storedCuidadora);
     setCuidadora(cuidadoraData);
     loadEscalas(cuidadoraData.id);
     loadConfig(cuidadoraData.id);

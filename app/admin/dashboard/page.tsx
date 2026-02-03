@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Cuidadora, Escala, ConfiguracaoHorarios } from "@/lib/types";
+import type { Cuidadora, Escala, ConfiguracaoHorarios, User } from "@/lib/types";
 
 export default function AdminDashboard() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [cuidadoras, setCuidadoras] = useState<Cuidadora[]>([]);
   const [selectedCuidadora, setSelectedCuidadora] = useState<string>("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -41,7 +41,8 @@ export default function AdminDashboard() {
       router.push("/admin");
       return;
     }
-    setUser(JSON.parse(storedUser));
+    const userData: User = JSON.parse(storedUser);
+    setUser(userData);
     loadCuidadoras();
   }, [router]);
 

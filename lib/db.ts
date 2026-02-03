@@ -42,7 +42,7 @@ export function addCuidadora(cuidadora: Omit<Cuidadora, 'id' | 'dataCadastro'>):
   const cuidadoras = getCuidadoras();
   const newCuidadora: Cuidadora = {
     ...cuidadora,
-    id: Date.now().toString(),
+    id: crypto.randomUUID(),
     dataCadastro: new Date().toISOString(),
   };
   cuidadoras.push(newCuidadora);
@@ -87,7 +87,7 @@ export function addEscala(escala: Omit<Escala, 'id'>): Escala {
   const escalas = getEscalas();
   const newEscala: Escala = {
     ...escala,
-    id: Date.now().toString(),
+    id: crypto.randomUUID(),
   };
   escalas.push(newEscala);
   saveEscalas(escalas);
@@ -139,7 +139,7 @@ export function saveConfiguracao(config: Omit<ConfiguracaoHorarios, 'id'>): Conf
   
   const newConfig: ConfiguracaoHorarios = {
     ...config,
-    id: Date.now().toString(),
+    id: crypto.randomUUID(),
   };
   configs.push(newConfig);
   saveConfiguracoes(configs);
@@ -172,7 +172,7 @@ export function addUser(user: Omit<User, 'id'>): User {
   const users = getUsers();
   const newUser: User = {
     ...user,
-    id: Date.now().toString(),
+    id: crypto.randomUUID(),
   };
   users.push(newUser);
   saveUsers(users);

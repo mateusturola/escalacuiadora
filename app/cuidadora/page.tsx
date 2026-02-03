@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import type { Cuidadora } from "@/lib/types";
+
 export default function CuidadoraLogin() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -17,11 +19,11 @@ export default function CuidadoraLogin() {
     try {
       // Get all cuidadoras
       const response = await fetch("/api/cuidadoras");
-      const cuidadoras = await response.json();
+      const cuidadoras: Cuidadora[] = await response.json();
 
       // Find cuidadora by email
       const cuidadora = cuidadoras.find(
-        (c: any) => c.email.toLowerCase() === email.toLowerCase()
+        (c: Cuidadora) => c.email.toLowerCase() === email.toLowerCase()
       );
 
       if (cuidadora) {

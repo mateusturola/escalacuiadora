@@ -103,6 +103,18 @@ npm run build
 npm start
 ```
 
+## Segurança
+
+⚠️ **IMPORTANTE**: Esta é uma implementação de demonstração. Para uso em produção, você deve:
+
+1. **Implementar hash de senhas** - Use bcrypt ou similar para hash de senhas ao invés de texto plano
+2. **Usar banco de dados real** - Substitua o armazenamento em JSON por PostgreSQL, MongoDB ou similar
+3. **Implementar autenticação JWT** - Use tokens JWT com refresh tokens para sessões seguras
+4. **Adicionar HTTPS** - Configure SSL/TLS para todas as conexões
+5. **Validar entradas** - Adicione validação e sanitização de dados em todas as APIs
+6. **Implementar rate limiting** - Proteja contra ataques de força bruta
+7. **Mudar credenciais padrão** - Remova ou force mudança de senha no primeiro login
+
 ## Licença
 
 ISC
