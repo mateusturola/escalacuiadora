@@ -72,14 +72,38 @@ export default function CalendarioPage() {
   };
 
   const getCor = (cuidadora: Cuidadora) => {
-    if (cuidadora.cor === 'blue') return 'bg-teal-100 border border-teal-400 text-teal-900';
+    if (cuidadora.cor === 'teal') return 'bg-teal-100 border border-teal-400 text-teal-900';
+    if (cuidadora.cor === 'blue') return 'bg-blue-100 border border-blue-400 text-blue-900';
     if (cuidadora.cor === 'pink') return 'bg-fuchsia-100 border border-fuchsia-400 text-fuchsia-900';
     return 'bg-gray-100 border border-gray-400 text-gray-900';
   };
 
+  const inicioBruna = new Date('2026-02-08T18:00:00');
+  const fimFeriasJanaina = new Date('2026-03-08T18:00:00');
+  const ms48h = 48 * 60 * 60 * 1000;
+
+  const ajustarCuidadora = (plantao: Plantao) => {
+    const inicio = new Date(plantao.inicio);
+
+    if (inicio < inicioBruna) return plantao.cuidadora;
+
+    const indiceBloco = Math.floor((inicio.getTime() - inicioBruna.getTime()) / ms48h);
+
+    if (inicio < fimFeriasJanaina) {
+      return indiceBloco % 2 === 0 ? 'Bruna' : 'Rosario';
+    }
+
+    return indiceBloco % 2 === 0 ? 'Bruna' : 'Janaina';
+  };
+
+  const plantoesAjustados = plantoes.map(plantao => ({
+    ...plantao,
+    cuidadora: ajustarCuidadora(plantao)
+  }));
+
   // Agrupar eventos contínuos
   const getEventosPorCuidadora = (cuidadora: Cuidadora) => {
-    return plantoes
+    return plantoesAjustados
       .filter(p => p.cuidadora === cuidadora.nome)
       .map(p => ({
         inicio: new Date(p.inicio),
@@ -87,7 +111,7 @@ export default function CalendarioPage() {
       }));
   };
 
-  const plantoesDoMes = plantoes.filter(plantao => {
+  const plantoesDoMes = plantoesAjustados.filter(plantao => {
     const inicio = new Date(plantao.inicio);
     const fim = new Date(plantao.fim);
     const primeiroDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
@@ -98,7 +122,7 @@ export default function CalendarioPage() {
   });
 
   // Contar apenas plantões que COMEÇAM no mês (para evitar dupla contagem)
-  const plantoesQueComecamNoMes = plantoes.filter(plantao => {
+  const plantoesQueComecamNoMes = plantoesAjustados.filter(plantao => {
     const inicio = new Date(plantao.inicio);
     return inicio.getFullYear() === mesAtual.getFullYear() && inicio.getMonth() === mesAtual.getMonth();
   });
@@ -123,20 +147,20 @@ export default function CalendarioPage() {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b p-4">
-        <div className="max-w-full mx-auto flex items-center justify-between">
+        <div className="max-w-full mx-auto flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
             <div className="flex gap-6 mt-2">
               {cuidadoras.map(cuidadora => (
                 <p key={cuidadora.id} className="text-sm text-gray-600">
-                  <span className="font-semibold">{cuidadora.nome}:</span> {plantoes.filter(p => p.cuidadora === cuidadora.nome).length} plantões
+                  <span className="font-semibold">{cuidadora.nome}:</span> {plantoesAjustados.filter(p => p.cuidadora === cuidadora.nome).length} plantões
                 </p>
               ))}
             </div>
           </div>
           
           {/* Navegação */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 mt-1">
             <button
               onClick={mesAnterior}
               className="p-2 hover:bg-gray-100 rounded transition"
@@ -198,14 +222,17 @@ export default function CalendarioPage() {
           </div>
 
           {/* Grid principal com posicionamento relativo */}
-          <div className="relative" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+          <div
+            className="relative"
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '112px' }}
+          >
             {/* Células de fundo */}
             {dias.map((data, index) => {
               if (!data) {
                 return (
                   <div
                     key={`empty-${index}`}
-                    className="border-r border-b bg-gray-50 min-h-28"
+                    className="border-r border-b bg-gray-50 h-28"
                     style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
                   >
                     <div className="p-2"></div>
@@ -218,7 +245,7 @@ export default function CalendarioPage() {
               return (
                 <div
                   key={data.toISOString()}
-                  className={`border-r border-b min-h-28 p-2 ${
+                  className={`border-r border-b h-28 p-2 ${
                     hoje ? 'bg-blue-50' : 'bg-white'
                   }`}
                   style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
@@ -313,31 +340,30 @@ export default function CalendarioPage() {
                   }
 
                   const diasNaLinha = colunaFinal - colunaInicial + 1;
-                  const topOffset = 36 + (cuidadoraIdx * 36);
-
-                  const horaInicio = evento.inicio.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
+                  const baseOffset = 12;
+                  const rowSpacing = 28;
+                  const marginTop = baseOffset + (cuidadoraIdx * rowSpacing);
 
                   const isPrimeiroSegmento = linha === linhaInicio;
                   const isUltimoSegmento = linha === linhaFim;
 
                   const meiaColuna = `calc((100% / ${diasNaLinha}) / 2 + 4px)`;
-                  const leftOffset = isPrimeiroSegmento && startMeio ? meiaColuna : '8px';
-                  const rightOffset = isUltimoSegmento && endMeio ? meiaColuna : '8px';
+                  const leftOffsetBase = isPrimeiroSegmento && startMeio ? meiaColuna : '8px';
+                  const rightOffsetBase = isUltimoSegmento && endMeio ? meiaColuna : '8px';
+                  const leftOffset = diasNaLinha === 1 ? '8px' : leftOffsetBase;
+                  const rightOffset = diasNaLinha === 1 ? '8px' : rightOffsetBase;
 
                   barras.push(
                     <div
                       key={`${cuidadora.id}-${eventoIdx}-${linha}`}
-                      className={`${getCor(cuidadora)} rounded px-3 py-2 font-bold text-sm absolute z-10`}
+                      className={`${getCor(cuidadora)} rounded px-3 py-2 font-bold text-sm z-10 self-start flex items-center justify-center text-center`}
                       style={{
                         gridColumn: `${colunaInicial} / span ${diasNaLinha}`,
                         gridRow: linha,
-                        top: `${topOffset}px`,
-                        left: leftOffset,
-                        right: rightOffset,
-                        height: '38px',
+                        marginTop: `${marginTop}px`,
+                        marginLeft: leftOffset,
+                        marginRight: rightOffset,
+                        height: '28px',
                       }}
                     >
                       {isPrimeiroSegmento ? cuidadora.nome : ''}
