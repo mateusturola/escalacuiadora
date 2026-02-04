@@ -1,0 +1,95 @@
+{
+  "cuidadoras": [
+    {
+      "id": "janaina-id",
+      "nome": "Janaina",
+      "telefone": "(24) 98854-5651",
+      "email": "janaina@email.com",
+      "cor": "blue"
+    },
+    {
+      "id": "bruna-id",
+      "nome": "Bruna",
+      "telefone": "(24) 98854-5652",
+      "email": "bruna@email.com",
+      "cor": "pink"
+    }
+  ],
+  "plantoes": [
+    {
+      "inicio": "2026-02-01T00:00:00",
+      "fim": "2026-02-02T18:00:00",
+      "cuidadora": "Janaina"
+    },
+    {
+      "inicio": "2026-02-02T18:00:00",
+      "fim": "2026-02-04T18:00:00",
+      "cuidadora": "Bruna"
+    },
+    {
+      "inicio": "2026-02-04T18:00:00",
+      "fim": "2026-02-06T18:00:00",
+      "cuidadora": "Janaina"
+    },
+    {
+      "inicio": "2026-02-06T18:00:00",
+      "fim": "2026-02-08T18:00:00",
+      "cuidadora": "Bruna"
+    },
+    {
+      "inicio": "2026-02-08T18:00:00",
+      "fim": "2026-02-10T18:00:00",
+      "cuidadora": "Janaina"
+    },
+    {
+      "inicio": "2026-02-10T18:00:00",
+      "fim": "2026-02-12T18:00:00",
+      "cuidadora": "Bruna"
+    },
+    {
+      "inicio": "2026-02-12T18:00:00",
+      "fim": "2026-02-14T18:00:00",
+      "cuidadora": "Janaina"
+    },
+    {
+      "inicio": "2026-02-14T18:00:00",
+      "fim": "2026-02-16T18:00:00",
+      "cuidadora": "Bruna"
+    },
+    {
+      "inicio": "2026-02-16T18:00:00",
+      "fim": "2026-02-18T18:00:00",
+      "cuidadora": "Janaina"
+    },
+    {
+      "inicio": "2026-02-18T18:00:00",
+      "fim": "2026-02-20T18:00:00",
+      "cuidadora": "Bruna"
+    },
+    {
+      "inicio": "2026-02-20T18:00:00",
+      "fim": "2026-02-22T18:00:00",
+      "cuidadora": "Janaina"
+    },
+    {
+      "inicio": "2026-02-22T18:00:00",
+      "fim": "2026-02-24T18:00:00",
+      "cuidadora": "Bruna"
+    },
+    {
+      "inicio": "2026-02-24T18:00:00",
+      "fim": "2026-02-26T18:00:00",
+      "cuidadora": "Janaina"
+    },
+    {
+      "inicio": "2026-02-26T18:00:00",
+      "fim": "2026-02-28T18:00:00",
+      "cuidadora": "Bruna"
+    },
+    {
+      "inicio": "2026-02-28T18:00:00",
+      "fim": "2026-03-02T18:00:00",
+      "cuidadora": "Janaina"
+    }
+  ]
+}

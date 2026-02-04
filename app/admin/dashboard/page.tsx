@@ -63,21 +63,28 @@ function CalendarioGeral({ cuidadoras }: { cuidadoras: Cuidadora[] }) {
 
   // Função para encontrar períodos contínuos de trabalho (48h)
   const getPeriodosContinuos = () => {
-    const periodos: Array<{
+    type Periodo = {
       cuidadora: Cuidadora;
       dataInicio: string;
       dataFim: string;
       cor: any;
       posicaoInicio: number;
       largura: number;
-    }> = [];
+    };
+    
+    type PeriodoAtual = {
+      dataInicio: string;
+      datas: string[];
+    };
+    
+    const periodos: Periodo[] = [];
 
     cuidadoras.forEach((cuidadora, index) => {
       const escalasDaCuidadora = (escalas[cuidadora.id] || [])
         .filter(e => e.tipo === 'trabalho')
         .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
 
-      let periodoAtual: { dataInicio: string; datas: string[] } | null = null;
+      let periodoAtual: PeriodoAtual | null = null;
 
       escalasDaCuidadora.forEach(escala => {
         if (!periodoAtual) {
@@ -121,21 +128,24 @@ function CalendarioGeral({ cuidadoras }: { cuidadoras: Cuidadora[] }) {
       });
 
       // Adicionar último período
-      if (periodoAtual && periodoAtual.datas.length > 0) {
-        const dataFim = periodoAtual.datas[periodoAtual.datas.length - 1];
-        const posicaoInicio = getDiasDoMes().findIndex(d => 
-          d && d.toISOString().split('T')[0] === periodoAtual!.dataInicio
-        );
-        
-        if (posicaoInicio !== -1) {
-          periodos.push({
-            cuidadora,
-            dataInicio: periodoAtual.dataInicio,
-            dataFim: dataFim,
-            cor: cores[index % cores.length],
-            posicaoInicio: posicaoInicio,
-            largura: periodoAtual.datas.length,
-          });
+      if (periodoAtual) {
+        const periodo = periodoAtual as PeriodoAtual;
+        if (periodo.datas && periodo.datas.length > 0) {
+          const dataFim = periodo.datas[periodo.datas.length - 1];
+          const posicaoInicio = getDiasDoMes().findIndex(d => 
+            d && d.toISOString().split('T')[0] === periodo.dataInicio
+          );
+          
+          if (posicaoInicio !== -1) {
+            periodos.push({
+              cuidadora,
+              dataInicio: periodo.dataInicio,
+              dataFim: dataFim,
+              cor: cores[index % cores.length],
+              posicaoInicio: posicaoInicio,
+              largura: periodo.datas.length,
+            });
+          }
         }
       }
     });
@@ -260,7 +270,7 @@ function CalendarioGeral({ cuidadoras }: { cuidadoras: Cuidadora[] }) {
                       }}
                       title={`${periodo.cuidadora.nome}: ${new Date(periodo.dataInicio).toLocaleDateString('pt-BR')} 18:00 - ${new Date(periodo.dataFim).toLocaleDateString('pt-BR')} 18:00`}
                     >
-                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span className="truncate">18hrs {periodo.cuidadora.nome} ({periodo.largura * 24}h)</span>
@@ -646,6 +656,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleArquivarCuidadora = async (id: string, arquivar: boolean) => {
+    try {
+      const response = await fetch("/api/cuidadoras", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, arquivada: arquivar }),
+      });
+
+      if (response.ok) {
+        loadCuidadoras();
+        alert(arquivar ? "Cuidadora arquivada com sucesso!" : "Cuidadora restaurada com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao arquivar cuidadora:", error);
+    }
+  };
+
   const handleAddEscala = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCuidadora) return;
@@ -709,9 +736,9 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-gray-100">
       {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl">
+      <header className="bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-xl">
         <div className="container mx-auto px-4 py-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
@@ -744,7 +771,7 @@ export default function AdminDashboard() {
         <div className="mb-6 flex gap-3 flex-wrap">
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2 hover:shadow-xl transform hover:-translate-y-0.5"
+            className="bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2 hover:shadow-xl transform hover:-translate-y-0.5"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -753,7 +780,7 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={handleGenerateAllSchedules}
-            className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2 hover:shadow-xl transform hover:-translate-y-0.5"
+            className="bg-linear-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2 hover:shadow-xl transform hover:-translate-y-0.5"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -762,7 +789,7 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={() => setShowEscalasGerais(true)}
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2 hover:shadow-xl transform hover:-translate-y-0.5"
+            className="bg-linear-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2 hover:shadow-xl transform hover:-translate-y-0.5"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -830,7 +857,7 @@ export default function AdminDashboard() {
           ) : (
             <div>
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                <thead className="bg-linear-to-r from-gray-50 to-gray-100">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                       Nome
@@ -860,7 +887,7 @@ export default function AdminDashboard() {
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                             cuidadora.arquivada 
                               ? 'bg-gray-200' 
-                              : 'bg-gradient-to-br from-teal-100 to-emerald-100'
+                              : 'bg-linear-to-br from-teal-100 to-emerald-100'
                           }`}>
                             <span className={`font-bold text-sm ${
                               cuidadora.arquivada ? 'text-gray-500' : 'text-teal-700'
@@ -911,7 +938,7 @@ export default function AdminDashboard() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-teal-100 to-emerald-100 text-teal-700 border border-teal-200">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-linear-to-r from-teal-100 to-emerald-100 text-teal-700 border border-teal-200">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
@@ -947,7 +974,7 @@ export default function AdminDashboard() {
                                 className="fixed inset-0 z-10" 
                                 onClick={() => setOpenDropdown(null)}
                               />
-                              <div className="absolute right-0 top-12 z-20 bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-[200px]">
+                              <div className="absolute right-0 top-12 z-20 bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-50">
                                 <button
                                   onClick={() => {
                                     setSelectedCuidadora(cuidadora.id);
@@ -1005,7 +1032,7 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-linear-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
@@ -1074,7 +1101,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Configuração de Trabalho */}
-              <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl p-4 space-y-4 border-2 border-teal-200">
+              <div className="bg-linear-to-br from-teal-50 to-emerald-50 rounded-xl p-4 space-y-4 border-2 border-teal-200">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-gray-800 flex items-center gap-2">
                     <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1101,7 +1128,7 @@ export default function AdminDashboard() {
                   <>
                     <div className="bg-white rounded-lg p-3 border border-teal-200">
                       <p className="text-sm text-gray-700 flex items-start gap-2">
-                        <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-teal-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span>
@@ -1147,7 +1174,7 @@ export default function AdminDashboard() {
               <div className="flex gap-3 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  className="flex-1 bg-linear-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1284,7 +1311,7 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-7xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <h2 className="text-3xl font-bold bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 Calendário de Escalas
               </h2>
               <button
@@ -1306,7 +1333,7 @@ export default function AdminDashboard() {
       {showGerarEscalasModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-bold mb-4 bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               Configurar Geração de Escalas
             </h2>
             <p className="text-sm text-gray-600 mb-6">
@@ -1372,7 +1399,7 @@ export default function AdminDashboard() {
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div className="text-sm text-blue-800">
@@ -1385,7 +1412,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={handleConfirmGerarEscalas}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
+                  className="flex-1 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
                 >
                   Gerar Escalas
                 </button>

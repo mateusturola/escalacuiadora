@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Card from "@/components/ui/Card";
+import Alert from "@/components/ui/Alert";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
@@ -38,8 +42,8 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen bg-linear-to-br from-indigo-50 to-blue-100 flex items-center justify-center p-4">
+      <Card className="max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-indigo-900 mb-2">
             Admin Login
@@ -51,52 +55,34 @@ export default function AdminLogin() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <Alert variant="error" onClose={() => setError("")}>
               {error}
-            </div>
+            </Alert>
           )}
 
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Usuário
-            </label>
-            <input
-              type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900"
-              required
-            />
-          </div>
+          <Input
+            label="Usuário"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Senha
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900"
-              required
-            />
-          </div>
+          <Input
+            label="Senha"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 disabled:opacity-50"
+            isLoading={loading}
+            className="w-full bg-indigo-600 hover:bg-indigo-700"
           >
             {loading ? "Entrando..." : "Entrar"}
-          </button>
+          </Button>
         </form>
 
         <div className="mt-6 text-center">
@@ -104,7 +90,7 @@ export default function AdminLogin() {
             Credenciais padrão: admin / admin123
           </p>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
               data: dateStr,
               horaInicio,
               horaFim,
-              tipo: 'trabalho',
+              tipo: 'trabalho' as const,
             });
             currentDate.setDate(currentDate.getDate() + 1);
           }
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
               data: dateStr,
               horaInicio: '00:00',
               horaFim: '00:00',
-              tipo: 'folga',
+              tipo: 'folga' as const,
             });
             currentDate.setDate(currentDate.getDate() + 1);
           }

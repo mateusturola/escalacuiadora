@@ -1,75 +1,264 @@
-import Link from "next/link";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface Cuidadora {
+  id: string;
+  nome: string;
+  telefone?: string;
+  email?: string;
+  cor?: string;
+}
+
+interface Plantao {
+  inicio: string;
+  fim: string;
+  cuidadora: string;
+}
+
+interface Agendamento {
+  cuidadoras: Cuidadora[];
+  plantoes: Plantao[];
+}
+
+export default function CalendarioPage() {
+  const [cuidadoras, setCuidadoras] = useState<Cuidadora[]>([]);
+  const [plantoes, setPlantoes] = useState<Plantao[]>([]);
+  const [mesAtual, setMesAtual] = useState(new Date(2026, 1)); // Fevereiro 2026
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const carregarDados = async () => {
+      try {
+        const res = await fetch('/agendamento.json');
+        const dados: Agendamento = await res.json();
+        setCuidadoras(dados.cuidadoras);
+        setPlantoes(dados.plantoes);
+      } catch (erro) {
+        console.error('Erro ao carregar dados:', erro);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarDados();
+  }, []);
+
+  // Gerar dias do mês
+  const primeiroDia = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
+  const ultimoDia = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+  const diasNoMes = ultimoDia.getDate();
+  
+  const dias: (Date | null)[] = [];
+  const diaDaSemana = primeiroDia.getDay();
+  
+  // Adicionar espaços vazios antes do primeiro dia
+  for (let i = 0; i < diaDaSemana; i++) {
+    dias.push(null);
+  }
+  
+  // Adicionar dias do mês
+  for (let i = 1; i <= diasNoMes; i++) {
+    dias.push(new Date(mesAtual.getFullYear(), mesAtual.getMonth(), i));
+  }
+
+  const proximoMes = () => {
+    setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1));
+  };
+
+  const mesAnterior = () => {
+    setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1));
+  };
+
+  const getCor = (cuidadora: Cuidadora) => {
+    if (cuidadora.cor === 'blue') return 'bg-blue-500';
+    if (cuidadora.cor === 'pink') return 'bg-pink-500';
+    return 'bg-gray-500';
+  };
+
+  // Agrupar eventos contínuos
+  const getEventosPorCuidadora = (cuidadora: Cuidadora) => {
+    return plantoes
+      .filter(p => p.cuidadora === cuidadora.nome)
+      .map(p => ({
+        inicio: new Date(p.inicio),
+        fim: new Date(p.fim)
+      }));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando escala...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
-      <div className="max-w-5xl w-full">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-block mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b p-4">
+        <div className="max-w-full mx-auto flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-800">Escala de Cuidadoras</h1>
+          
+          {/* Navegação */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={mesAnterior}
+              className="p-2 hover:bg-gray-100 rounded transition"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <h2 className="text-lg font-bold text-gray-800 min-w-48 text-center">
+              {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+            </h2>
+            <button
+              onClick={proximoMes}
+              className="p-2 hover:bg-gray-100 rounded transition"
+            >
+              <ChevronRight size={24} />
+            </button>
           </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
-            EscalaCuidadora
-          </h1>
-          <p className="text-xl text-gray-600">
-            Sistema Inteligente de Gerenciamento de Escalas
-          </p>
         </div>
+      </div>
 
-        {/* Cards de Acesso */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {/* Admin Card */}
-          <Link href="/admin" className="group">
-            <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 border-2 border-transparent hover:border-indigo-200 transform hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+      <div className="p-4">
+        {/* Calendário */}
+        <div className="bg-white rounded-lg shadow overflow-hidden border">
+          {/* Cabeçalho dos dias da semana */}
+          <div className="grid grid-cols-7 bg-gray-50 border-b">
+            {['DOM.', 'SEG.', 'TER.', 'QUA.', 'QUI.', 'SEX.', 'SAB.'].map(dia => (
+              <div
+                key={dia}
+                className="p-3 text-center font-bold text-gray-800 border-r text-sm h-12 flex items-center justify-center"
+              >
+                {dia}
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Administrador</h2>
-              <p className="text-gray-600 mb-4">Gerencie cuidadoras, configure horários e crie escalas</p>
-              <div className="flex items-center text-indigo-600 font-semibold group-hover:gap-2 transition-all">
-                <span>Acessar painel</span>
-                <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-          </Link>
+            ))}
+          </div>
 
-          {/* Cuidadora Card */}
-          <Link href="/cuidadora" className="group">
-            <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 border-2 border-transparent hover:border-teal-200 transform hover:-translate-y-1">
-              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Cuidadora</h2>
-              <p className="text-gray-600 mb-4">Visualize sua escala, horários e configurações de trabalho</p>
-              <div className="flex items-center text-teal-600 font-semibold group-hover:gap-2 transition-all">
-                <span>Ver minha escala</span>
-                <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-          </Link>
-        </div>
+          {/* Grid principal com posicionamento relativo */}
+          <div className="relative" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+            {/* Células de fundo */}
+            {dias.map((data, index) => {
+              if (!data) {
+                return (
+                  <div
+                    key={`empty-${index}`}
+                    className="border-r border-b bg-gray-50 min-h-40"
+                    style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
+                  >
+                    <div className="p-2"></div>
+                  </div>
+                );
+              }
 
-        {/* Footer Info */}
-        <div className="mt-12 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/50 backdrop-blur rounded-full text-sm text-gray-600">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            Acesso seguro e protegido
+              const hoje = new Date().toDateString() === data.toDateString();
+
+              return (
+                <div
+                  key={data.toISOString()}
+                  className={`border-r border-b min-h-40 p-2 ${
+                    hoje ? 'bg-blue-50' : 'bg-white'
+                  }`}
+                  style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
+                >
+                  {/* Número do dia */}
+                  <div className={`text-sm font-bold ${
+                    hoje ? 'text-blue-600' : 'text-gray-700'
+                  }`}>
+                    {data.getDate()}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Eventos como barras que atravessam dias */}
+            {cuidadoras.map((cuidadora, cuidadoraIdx) => {
+              const eventos = getEventosPorCuidadora(cuidadora);
+              
+              return eventos.map((evento, eventoIdx) => {
+                const barras = [];
+
+                const inicio = evento.inicio;
+                const fim = evento.fim;
+                const inicioDia = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+                const fimDia = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+                const fimInclusivo = new Date(fimDia);
+
+                if (fim.getHours() === 0 && fim.getMinutes() === 0 && fim.getSeconds() === 0) {
+                  fimInclusivo.setDate(fimInclusivo.getDate() - 1);
+                }
+
+                // Encontrar a posição inicial e final do evento no array dias
+                const indiceInicio = dias.findIndex(d => d && d.toDateString() === inicioDia.toDateString());
+
+                if (indiceInicio === -1) return null;
+
+                const indiceFim = dias.findIndex(d => d && d.toDateString() === fimInclusivo.toDateString());
+
+                if (indiceFim === -1) return null;
+
+                const linhaInicio = Math.floor(indiceInicio / 7) + 1;
+                const linhaFim = Math.floor(indiceFim / 7) + 1;
+
+                // Renderizar uma barra para cada linha que o evento atravessa
+                for (let linha = linhaInicio; linha <= linhaFim; linha++) {
+                  let colunaInicial, colunaFinal;
+                  
+                  if (linha === linhaInicio) {
+                    // Primeira linha: começa na coluna do evento
+                    colunaInicial = (indiceInicio % 7) + 1;
+                    if (linha === linhaFim) {
+                      // Se também é a última linha, termina na coluna final
+                      colunaFinal = (indiceFim % 7) + 1;
+                    } else {
+                      // Senão, vai até o final da semana
+                      colunaFinal = 7;
+                    }
+                  } else if (linha === linhaFim) {
+                    // Última linha: começa na coluna 1
+                    colunaInicial = 1;
+                    colunaFinal = (indiceFim % 7) + 1;
+                  } else {
+                    // Linhas intermediárias: semana completa
+                    colunaInicial = 1;
+                    colunaFinal = 7;
+                  }
+
+                  const diasNaLinha = colunaFinal - colunaInicial + 1;
+                  const topOffset = 32 + (cuidadoraIdx * 32);
+
+                  const horaInicio = inicio.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+
+                  barras.push(
+                    <div
+                      key={`${cuidadora.id}-${eventoIdx}-${linha}`}
+                      className={`${getCor(cuidadora)} text-white rounded px-2 py-1 font-semibold text-xs absolute z-10`}
+                      style={{
+                        gridColumn: `${colunaInicial} / span ${diasNaLinha}`,
+                        gridRow: linha,
+                        top: `${topOffset}px`,
+                        left: '8px',
+                        right: '8px',
+                        height: '24px',
+                      }}
+                    >
+                      {linha === linhaInicio && colunaInicial === ((indiceInicio % 7) + 1) ? `${horaInicio} ` : ''}{cuidadora.nome}
+                    </div>
+                  );
+                }
+
+                return barras;
+              });
+            })}
           </div>
         </div>
       </div>
