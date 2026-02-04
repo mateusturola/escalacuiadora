@@ -124,7 +124,16 @@ export default function CalendarioPage() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b p-4">
         <div className="max-w-full mx-auto flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
+            <div className="flex gap-6 mt-2">
+              {cuidadoras.map(cuidadora => (
+                <p key={cuidadora.id} className="text-sm text-gray-600">
+                  <span className="font-semibold">{cuidadora.nome}:</span> {plantoes.filter(p => p.cuidadora === cuidadora.nome).length} plantões
+                </p>
+              ))}
+            </div>
+          </div>
           
           {/* Navegação */}
           <div className="flex items-center gap-4">
