@@ -82,9 +82,7 @@ export default function CalendarioPage() {
   const fimFeriasJanaina = new Date('2026-03-08T18:00:00');
   const ms48h = 48 * 60 * 60 * 1000;
 
-  const ajustarCuidadora = (plantao: Plantao) => {
-    const inicio = new Date(plantao.inicio);
-
+  const ajustarCuidadoraPorInicio = (plantao: Plantao, inicio: Date) => {
     if (inicio < inicioBruna) return plantao.cuidadora;
 
     const indiceBloco = Math.floor((inicio.getTime() - inicioBruna.getTime()) / ms48h);
@@ -96,10 +94,33 @@ export default function CalendarioPage() {
     return indiceBloco % 2 === 0 ? 'Bruna' : 'Janaina';
   };
 
-  const plantoesAjustados = plantoes.map(plantao => ({
-    ...plantao,
-    cuidadora: ajustarCuidadora(plantao)
-  }));
+  const plantoesAjustados = plantoes.flatMap(plantao => {
+    const inicio = new Date(plantao.inicio);
+    const fim = new Date(plantao.fim);
+    const cortes = [inicioBruna, fimFeriasJanaina]
+      .filter(corte => corte > inicio && corte < fim)
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    let inicioSegmento = inicio;
+    const segmentos: Plantao[] = [];
+
+    for (const corte of cortes) {
+      segmentos.push({
+        inicio: inicioSegmento.toISOString(),
+        fim: corte.toISOString(),
+        cuidadora: ajustarCuidadoraPorInicio(plantao, inicioSegmento),
+      });
+      inicioSegmento = corte;
+    }
+
+    segmentos.push({
+      inicio: inicioSegmento.toISOString(),
+      fim: fim.toISOString(),
+      cuidadora: ajustarCuidadoraPorInicio(plantao, inicioSegmento),
+    });
+
+    return segmentos;
+  });
 
   // Agrupar eventos contínuos
   const getEventosPorCuidadora = (cuidadora: Cuidadora) => {
@@ -131,6 +152,9 @@ export default function CalendarioPage() {
     cuidadora,
     total: plantoesQueComecamNoMes.filter(p => p.cuidadora === cuidadora.nome).length
   }));
+
+  const temPlantaoNoMes = (cuidadora: Cuidadora) =>
+    plantoesDoMes.some(p => p.cuidadora === cuidadora.nome);
 
   if (loading) {
     return (
@@ -224,7 +248,7 @@ export default function CalendarioPage() {
           {/* Grid principal com posicionamento relativo */}
           <div
             className="relative"
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '112px' }}
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '136px' }}
           >
             {/* Células de fundo */}
             {dias.map((data, index) => {
@@ -232,7 +256,7 @@ export default function CalendarioPage() {
                 return (
                   <div
                     key={`empty-${index}`}
-                    className="border-r border-b bg-gray-50 h-28"
+                    className="border-r border-b bg-gray-50 h-32"
                     style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
                   >
                     <div className="p-2"></div>
@@ -245,13 +269,13 @@ export default function CalendarioPage() {
               return (
                 <div
                   key={data.toISOString()}
-                  className={`border-r border-b h-28 p-2 ${
+                  className={`border-r border-b h-32 p-2 ${
                     hoje ? 'bg-blue-50' : 'bg-white'
                   }`}
                   style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
                 >
                   {/* Número do dia */}
-                  <div className={`text-base font-bold ${
+                  <div className={`text-base font-bold relative z-20 inline-flex px-1 rounded bg-white/90 ${
                     hoje ? 'text-blue-700' : 'text-gray-900'
                   }`}>
                     {data.getDate()}
@@ -340,7 +364,7 @@ export default function CalendarioPage() {
                   }
 
                   const diasNaLinha = colunaFinal - colunaInicial + 1;
-                  const baseOffset = 12;
+                  const baseOffset = 24;
                   const rowSpacing = 28;
                   const marginTop = baseOffset + (cuidadoraIdx * rowSpacing);
 
@@ -366,7 +390,7 @@ export default function CalendarioPage() {
                         height: '28px',
                       }}
                     >
-                      {isPrimeiroSegmento ? cuidadora.nome : ''}
+                      {isPrimeiroSegmento && temPlantaoNoMes(cuidadora) ? cuidadora.nome : ''}
                     </div>
                   );
                 }

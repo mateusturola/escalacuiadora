@@ -240,7 +240,7 @@ function CalendarioGeral({ cuidadoras }: { cuidadoras: Cuidadora[] }) {
                   isHoje ? 'ring-2 ring-blue-500' : ''
                 }`}
               >
-                <div className={`text-sm font-semibold ${
+                <div className={`text-sm font-semibold relative z-20 ${
                   isHoje ? 'text-blue-600' : 'text-gray-700'
                 }`}>
                   {data.getDate()}
@@ -254,7 +254,7 @@ function CalendarioGeral({ cuidadoras }: { cuidadoras: Cuidadora[] }) {
                   
                   // Alternar posição: índice par em cima, ímpar embaixo
                   const cuidadoraIndex = cuidadoras.findIndex(c => c.id === periodo.cuidadora.id);
-                  const posicaoVertical = cuidadoraIndex % 2 === 0 ? 24 : 52;
+                  const posicaoVertical = cuidadoraIndex % 2 === 0 ? 30 : 58;
                   
                   return (
                     <div
