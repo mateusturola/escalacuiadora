@@ -156,6 +156,20 @@ export default function CalendarioPage() {
   const temPlantaoNoMes = (cuidadora: Cuidadora) =>
     plantoesDoMes.some(p => p.cuidadora === cuidadora.nome);
 
+  const getPlantaoDoDia = (data: Date) => {
+    const inicioDia = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+    const fimDia = new Date(data.getFullYear(), data.getMonth(), data.getDate(), 23, 59, 59, 999);
+
+    return plantoesDoMes.find(plantao => {
+      const inicio = new Date(plantao.inicio);
+      const fim = new Date(plantao.fim);
+      return inicio <= fimDia && fim >= inicioDia;
+    });
+  };
+
+  const getCuidadoraPorNome = (nome: string) =>
+    cuidadoras.find(c => c.nome === nome);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -170,13 +184,13 @@ export default function CalendarioPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b p-4">
-        <div className="max-w-full mx-auto flex items-start justify-between">
+      <div className="bg-white shadow-sm border-b p-3 md:p-4">
+        <div className="max-w-full mx-auto flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
-            <div className="flex gap-6 mt-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
               {cuidadoras.map(cuidadora => (
-                <p key={cuidadora.id} className="text-sm text-gray-600">
+                <p key={cuidadora.id} className="text-xs md:text-sm text-gray-600">
                   <span className="font-semibold">{cuidadora.nome}:</span> {plantoesAjustados.filter(p => p.cuidadora === cuidadora.nome).length} plantões
                 </p>
               ))}
@@ -184,19 +198,19 @@ export default function CalendarioPage() {
           </div>
           
           {/* Navegação */}
-          <div className="flex items-center gap-4 mt-1">
+          <div className="flex items-center gap-3 md:gap-4 md:mt-1">
             <button
               onClick={mesAnterior}
-              className="p-2 hover:bg-gray-100 rounded transition"
+              className="p-1.5 md:p-2 hover:bg-gray-100 rounded transition"
             >
               <ChevronLeft size={24} />
             </button>
-            <h2 className="text-xl font-bold text-gray-900 min-w-56 text-center">
+            <h2 className="text-base md:text-xl font-bold text-gray-900 md:min-w-56 text-center">
               {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
             </h2>
             <button
               onClick={proximoMes}
-              className="p-2 hover:bg-gray-100 rounded transition"
+              className="p-1.5 md:p-2 hover:bg-gray-100 rounded transition"
             >
               <ChevronRight size={24} />
             </button>
@@ -204,26 +218,26 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-2 md:p-4">
         {/* Legenda e contagem */}
-        <div className="bg-white rounded-lg shadow border p-4 mb-4">
-          <div className="flex flex-wrap items-center gap-6">
+        <div className="bg-white rounded-lg shadow border p-3 md:p-4 mb-4">
+          <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-6">
             <div className="flex items-center gap-3">
-              <span className="text-lg font-bold text-gray-900">Legenda</span>
-              <div className="flex flex-wrap items-center gap-4">
+              <span className="text-base md:text-lg font-bold text-gray-900">Legenda</span>
+              <div className="flex flex-wrap items-center gap-3 md:gap-4">
                 {cuidadoras.map(cuidadora => (
                   <div key={cuidadora.id} className="flex items-center gap-2">
                     <span className={`${getCor(cuidadora)} inline-block w-4 h-4 rounded`}></span>
-                    <span className="text-base font-semibold text-gray-900">{cuidadora.nome}</span>
+                    <span className="text-sm md:text-base font-semibold text-gray-900">{cuidadora.nome}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4">
-              <span className="text-lg font-bold text-gray-900">Plantões no mês</span>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
+              <span className="text-base md:text-lg font-bold text-gray-900">Plantões no mês</span>
               {contagemPorCuidadora.map(item => (
-                <div key={item.cuidadora.id} className="text-base font-semibold text-gray-900">
+                <div key={item.cuidadora.id} className="text-sm md:text-base font-semibold text-gray-900">
                   {item.cuidadora.nome}: {item.total}
                 </div>
               ))}
@@ -231,14 +245,171 @@ export default function CalendarioPage() {
           </div>
         </div>
 
-        {/* Calendário */}
-        <div className="bg-white rounded-lg shadow overflow-hidden border">
-          {/* Cabeçalho dos dias da semana */}
+        {/* Calendário compacto (mobile) */}
+        <div className="bg-white rounded-lg shadow border mb-4 md:hidden">
           <div className="grid grid-cols-7 bg-gray-100 border-b">
+            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(dia => (
+              <div
+                key={dia}
+                className="py-2 text-center font-bold text-gray-900 border-r text-xs"
+              >
+                {dia}
+              </div>
+            ))}
+          </div>
+
+          {/* Grid principal mobile */}
+          <div
+            className="relative"
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '100px' }}
+          >
+            {/* Células de fundo */}
+            {dias.map((data, index) => {
+              if (!data) {
+                return (
+                  <div
+                    key={`empty-${index}`}
+                    className="border-r border-b bg-gray-50"
+                    style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
+                  >
+                    <div className="p-1"></div>
+                  </div>
+                );
+              }
+
+              const hoje = new Date().toDateString() === data.toDateString();
+
+              return (
+                <div
+                  key={data.toISOString()}
+                  className={`border-r border-b p-1 ${
+                    hoje ? 'bg-blue-50' : 'bg-white'
+                  }`}
+                  style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
+                >
+                  {/* Número do dia */}
+                  <div className={`text-xs font-bold relative z-20 inline-flex px-1 rounded bg-white/90 ${
+                    hoje ? 'text-blue-700' : 'text-gray-900'
+                  }`}>
+                    {data.getDate()}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Eventos como barras (mobile compactado) */}
+            {cuidadoras.map((cuidadora, cuidadoraIdx) => {
+              const eventosDoMes = plantoesDoMes
+                .filter(p => p.cuidadora === cuidadora.nome)
+                .map(p => ({
+                  inicio: new Date(p.inicio),
+                  fim: new Date(p.fim)
+                }));
+              
+              return eventosDoMes.map((evento, eventoIdx) => {
+                const barras = [];
+
+                let inicio = evento.inicio;
+                let fim = evento.fim;
+                
+                const primeiroDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
+                const ultimoDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+                
+                if (inicio < primeiroDiaDoMes) {
+                  inicio = primeiroDiaDoMes;
+                }
+                
+                if (fim > ultimoDiaDoMes) {
+                  fim = new Date(ultimoDiaDoMes.getFullYear(), ultimoDiaDoMes.getMonth(), ultimoDiaDoMes.getDate(), 23, 59, 59);
+                }
+
+                const inicioDia = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+                const fimDia = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+                const fimInclusivo = new Date(fimDia);
+
+                if (fim.getHours() === 0 && fim.getMinutes() === 0 && fim.getSeconds() === 0) {
+                  fimInclusivo.setDate(fimInclusivo.getDate() - 1);
+                }
+
+                const indiceInicio = dias.findIndex(d => d && d.toDateString() === inicioDia.toDateString());
+
+                if (indiceInicio === -1) return null;
+
+                let indiceFim = dias.findIndex(d => d && d.toDateString() === fimInclusivo.toDateString());
+                
+                if (indiceFim === -1) {
+                  indiceFim = dias.length - 1;
+                }
+
+                const linhaInicio = Math.floor(indiceInicio / 7) + 1;
+                const linhaFim = Math.floor(indiceFim / 7) + 1;
+                const startMeio = inicio.getHours() >= 12;
+                const endMeio = fim.getHours() >= 12;
+
+                for (let linha = linhaInicio; linha <= linhaFim; linha++) {
+                  let colunaInicial, colunaFinal;
+                  
+                  if (linha === linhaInicio) {
+                    colunaInicial = (indiceInicio % 7) + 1;
+                    if (linha === linhaFim) {
+                      colunaFinal = (indiceFim % 7) + 1;
+                    } else {
+                      colunaFinal = 7;
+                    }
+                  } else if (linha === linhaFim) {
+                    colunaInicial = 1;
+                    colunaFinal = (indiceFim % 7) + 1;
+                  } else {
+                    colunaInicial = 1;
+                    colunaFinal = 7;
+                  }
+
+                  const diasNaLinha = colunaFinal - colunaInicial + 1;
+                  const baseOffset = 32;
+                  const rowSpacing = 22;
+                  const marginTop = baseOffset + (cuidadoraIdx * rowSpacing);
+
+                  const isPrimeiroSegmento = linha === linhaInicio;
+                  const isUltimoSegmento = linha === linhaFim;
+
+                  const meiaColuna = `calc((100% / ${diasNaLinha}) / 2 + 2px)`;
+                  const leftOffsetBase = isPrimeiroSegmento && startMeio ? meiaColuna : '4px';
+                  const rightOffsetBase = isUltimoSegmento && endMeio ? meiaColuna : '4px';
+                  const leftOffset = diasNaLinha === 1 ? '4px' : leftOffsetBase;
+                  const rightOffset = diasNaLinha === 1 ? '4px' : rightOffsetBase;
+
+                  barras.push(
+                    <div
+                      key={`${cuidadora.id}-${eventoIdx}-${linha}`}
+                      className={`${getCor(cuidadora)} rounded px-2 py-1 font-bold text-xs z-10 self-start flex items-center justify-center text-center truncate`}
+                      style={{
+                        gridColumn: `${colunaInicial} / span ${diasNaLinha}`,
+                        gridRow: linha,
+                        marginTop: `${marginTop}px`,
+                        marginLeft: leftOffset,
+                        marginRight: rightOffset,
+                        height: '18px',
+                      }}
+                    >
+                      {isPrimeiroSegmento && temPlantaoNoMes(cuidadora) ? cuidadora.nome : ''}
+                    </div>
+                  );
+                }
+
+                return barras;
+              });
+            })}
+          </div>
+        </div>
+
+        {/* Calendário */}
+        <div className="bg-white rounded-lg shadow overflow-hidden border hidden md:block">
+          {/* Cabeçalho dos dias da semana */}
+          <div className="grid grid-cols-7 bg-gray-100 border-b min-w-[860px]">
             {['DOM.', 'SEG.', 'TER.', 'QUA.', 'QUI.', 'SEX.', 'SAB.'].map(dia => (
               <div
                 key={dia}
-                className="p-3 text-center font-bold text-gray-900 border-r text-base h-14 flex items-center justify-center"
+                className="p-2 md:p-3 text-center font-bold text-gray-900 border-r text-xs md:text-base h-12 md:h-14 flex items-center justify-center"
               >
                 {dia}
               </div>
@@ -246,10 +417,11 @@ export default function CalendarioPage() {
           </div>
 
           {/* Grid principal com posicionamento relativo */}
-          <div
-            className="relative"
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '136px' }}
-          >
+          <div className="overflow-x-auto">
+            <div
+              className="relative min-w-[860px]"
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '136px' }}
+            >
             {/* Células de fundo */}
             {dias.map((data, index) => {
               if (!data) {
@@ -364,7 +536,7 @@ export default function CalendarioPage() {
                   }
 
                   const diasNaLinha = colunaFinal - colunaInicial + 1;
-                  const baseOffset = 24;
+                  const baseOffset = 32;
                   const rowSpacing = 28;
                   const marginTop = baseOffset + (cuidadoraIdx * rowSpacing);
 
@@ -398,6 +570,7 @@ export default function CalendarioPage() {
                 return barras;
               });
             })}
+            </div>
           </div>
         </div>
       </div>
