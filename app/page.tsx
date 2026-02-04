@@ -89,12 +89,23 @@ export default function CalendarioPage() {
 
   const plantoesDoMes = plantoes.filter(plantao => {
     const inicio = new Date(plantao.inicio);
+    const fim = new Date(plantao.fim);
+    const primeiroDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
+    const primeiroDiaProximoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
+    
+    // Incluir plantão se ele sobrepõe o mês
+    return inicio < primeiroDiaProximoMes && fim > primeiroDiaDoMes;
+  });
+
+  // Contar apenas plantões que COMEÇAM no mês (para evitar dupla contagem)
+  const plantoesQueComecamNoMes = plantoes.filter(plantao => {
+    const inicio = new Date(plantao.inicio);
     return inicio.getFullYear() === mesAtual.getFullYear() && inicio.getMonth() === mesAtual.getMonth();
   });
 
   const contagemPorCuidadora = cuidadoras.map(cuidadora => ({
     cuidadora,
-    total: plantoesDoMes.filter(p => p.cuidadora === cuidadora.nome).length
+    total: plantoesQueComecamNoMes.filter(p => p.cuidadora === cuidadora.nome).length
   }));
 
   if (loading) {
@@ -215,13 +226,33 @@ export default function CalendarioPage() {
 
             {/* Eventos como barras que atravessam dias */}
             {cuidadoras.map((cuidadora, cuidadoraIdx) => {
-              const eventos = getEventosPorCuidadora(cuidadora);
+              // Usar apenas plantões que sobrepõem o mês
+              const eventosDoMes = plantoesDoMes
+                .filter(p => p.cuidadora === cuidadora.nome)
+                .map(p => ({
+                  inicio: new Date(p.inicio),
+                  fim: new Date(p.fim)
+                }));
               
-              return eventos.map((evento, eventoIdx) => {
+              return eventosDoMes.map((evento, eventoIdx) => {
                 const barras = [];
 
-                const inicio = evento.inicio;
-                const fim = evento.fim;
+                let inicio = evento.inicio;
+                let fim = evento.fim;
+                
+                // Se o plantão começa antes do mês, ajustar para o primeiro dia
+                const primeiroDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
+                const ultimoDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+                
+                if (inicio < primeiroDiaDoMes) {
+                  inicio = primeiroDiaDoMes;
+                }
+                
+                // Se o plantão termina depois do mês, ajustar para o último dia
+                if (fim > ultimoDiaDoMes) {
+                  fim = new Date(ultimoDiaDoMes.getFullYear(), ultimoDiaDoMes.getMonth(), ultimoDiaDoMes.getDate(), 23, 59, 59);
+                }
+
                 const inicioDia = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
                 const fimDia = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
                 const fimInclusivo = new Date(fimDia);
@@ -230,14 +261,18 @@ export default function CalendarioPage() {
                   fimInclusivo.setDate(fimInclusivo.getDate() - 1);
                 }
 
-                // Encontrar a posição inicial e final do evento no array dias
+                // Encontrar a posição inicial do evento no array dias
                 const indiceInicio = dias.findIndex(d => d && d.toDateString() === inicioDia.toDateString());
 
                 if (indiceInicio === -1) return null;
 
-                const indiceFim = dias.findIndex(d => d && d.toDateString() === fimInclusivo.toDateString());
-
-                if (indiceFim === -1) return null;
+                // Procurar o fim no mês atual
+                let indiceFim = dias.findIndex(d => d && d.toDateString() === fimInclusivo.toDateString());
+                
+                // Se não encontrar, usar o último dia do mês
+                if (indiceFim === -1) {
+                  indiceFim = dias.length - 1;
+                }
 
                 const linhaInicio = Math.floor(indiceInicio / 7) + 1;
                 const linhaFim = Math.floor(indiceFim / 7) + 1;
@@ -271,7 +306,7 @@ export default function CalendarioPage() {
                   const diasNaLinha = colunaFinal - colunaInicial + 1;
                   const topOffset = 36 + (cuidadoraIdx * 36);
 
-                  const horaInicio = inicio.toLocaleTimeString('pt-BR', {
+                  const horaInicio = evento.inicio.toLocaleTimeString('pt-BR', {
                     hour: '2-digit',
                     minute: '2-digit'
                   });
@@ -296,7 +331,7 @@ export default function CalendarioPage() {
                         height: '38px',
                       }}
                     >
-                      {isPrimeiroSegmento ? `${horaInicio} ${cuidadora.nome}` : ''}
+                      {isPrimeiroSegmento ? cuidadora.nome : ''}
                     </div>
                   );
                 }
