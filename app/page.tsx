@@ -72,9 +72,9 @@ export default function CalendarioPage() {
   };
 
   const getCor = (cuidadora: Cuidadora) => {
-    if (cuidadora.cor === 'blue') return 'bg-blue-500';
-    if (cuidadora.cor === 'pink') return 'bg-pink-500';
-    return 'bg-gray-500';
+    if (cuidadora.cor === 'blue') return 'bg-teal-100 border border-teal-400 text-teal-900';
+    if (cuidadora.cor === 'pink') return 'bg-fuchsia-100 border border-fuchsia-400 text-fuchsia-900';
+    return 'bg-gray-100 border border-gray-400 text-gray-900';
   };
 
   // Agrupar eventos contínuos
@@ -86,6 +86,16 @@ export default function CalendarioPage() {
         fim: new Date(p.fim)
       }));
   };
+
+  const plantoesDoMes = plantoes.filter(plantao => {
+    const inicio = new Date(plantao.inicio);
+    return inicio.getFullYear() === mesAtual.getFullYear() && inicio.getMonth() === mesAtual.getMonth();
+  });
+
+  const contagemPorCuidadora = cuidadoras.map(cuidadora => ({
+    cuidadora,
+    total: plantoesDoMes.filter(p => p.cuidadora === cuidadora.nome).length
+  }));
 
   if (loading) {
     return (
@@ -103,7 +113,7 @@ export default function CalendarioPage() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b p-4">
         <div className="max-w-full mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-800">Escala de Cuidadoras</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
           
           {/* Navegação */}
           <div className="flex items-center gap-4">
@@ -113,7 +123,7 @@ export default function CalendarioPage() {
             >
               <ChevronLeft size={24} />
             </button>
-            <h2 className="text-lg font-bold text-gray-800 min-w-48 text-center">
+            <h2 className="text-xl font-bold text-gray-900 min-w-56 text-center">
               {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
             </h2>
             <button
@@ -127,14 +137,40 @@ export default function CalendarioPage() {
       </div>
 
       <div className="p-4">
+        {/* Legenda e contagem */}
+        <div className="bg-white rounded-lg shadow border p-4 mb-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-bold text-gray-900">Legenda</span>
+              <div className="flex flex-wrap items-center gap-4">
+                {cuidadoras.map(cuidadora => (
+                  <div key={cuidadora.id} className="flex items-center gap-2">
+                    <span className={`${getCor(cuidadora)} inline-block w-4 h-4 rounded`}></span>
+                    <span className="text-base font-semibold text-gray-900">{cuidadora.nome}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="text-lg font-bold text-gray-900">Plantões no mês</span>
+              {contagemPorCuidadora.map(item => (
+                <div key={item.cuidadora.id} className="text-base font-semibold text-gray-900">
+                  {item.cuidadora.nome}: {item.total}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Calendário */}
         <div className="bg-white rounded-lg shadow overflow-hidden border">
           {/* Cabeçalho dos dias da semana */}
-          <div className="grid grid-cols-7 bg-gray-50 border-b">
+          <div className="grid grid-cols-7 bg-gray-100 border-b">
             {['DOM.', 'SEG.', 'TER.', 'QUA.', 'QUI.', 'SEX.', 'SAB.'].map(dia => (
               <div
                 key={dia}
-                className="p-3 text-center font-bold text-gray-800 border-r text-sm h-12 flex items-center justify-center"
+                className="p-3 text-center font-bold text-gray-900 border-r text-base h-14 flex items-center justify-center"
               >
                 {dia}
               </div>
@@ -149,7 +185,7 @@ export default function CalendarioPage() {
                 return (
                   <div
                     key={`empty-${index}`}
-                    className="border-r border-b bg-gray-50 min-h-40"
+                    className="border-r border-b bg-gray-50 min-h-28"
                     style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
                   >
                     <div className="p-2"></div>
@@ -162,14 +198,14 @@ export default function CalendarioPage() {
               return (
                 <div
                   key={data.toISOString()}
-                  className={`border-r border-b min-h-40 p-2 ${
+                  className={`border-r border-b min-h-28 p-2 ${
                     hoje ? 'bg-blue-50' : 'bg-white'
                   }`}
                   style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
                 >
                   {/* Número do dia */}
-                  <div className={`text-sm font-bold ${
-                    hoje ? 'text-blue-600' : 'text-gray-700'
+                  <div className={`text-base font-bold ${
+                    hoje ? 'text-blue-700' : 'text-gray-900'
                   }`}>
                     {data.getDate()}
                   </div>
@@ -205,6 +241,8 @@ export default function CalendarioPage() {
 
                 const linhaInicio = Math.floor(indiceInicio / 7) + 1;
                 const linhaFim = Math.floor(indiceFim / 7) + 1;
+                const startMeio = inicio.getHours() >= 12;
+                const endMeio = fim.getHours() >= 12;
 
                 // Renderizar uma barra para cada linha que o evento atravessa
                 for (let linha = linhaInicio; linha <= linhaFim; linha++) {
@@ -231,27 +269,34 @@ export default function CalendarioPage() {
                   }
 
                   const diasNaLinha = colunaFinal - colunaInicial + 1;
-                  const topOffset = 32 + (cuidadoraIdx * 32);
+                  const topOffset = 36 + (cuidadoraIdx * 36);
 
                   const horaInicio = inicio.toLocaleTimeString('pt-BR', {
                     hour: '2-digit',
                     minute: '2-digit'
                   });
 
+                  const isPrimeiroSegmento = linha === linhaInicio;
+                  const isUltimoSegmento = linha === linhaFim;
+
+                  const meiaColuna = `calc((100% / ${diasNaLinha}) / 2 + 4px)`;
+                  const leftOffset = isPrimeiroSegmento && startMeio ? meiaColuna : '8px';
+                  const rightOffset = isUltimoSegmento && endMeio ? meiaColuna : '8px';
+
                   barras.push(
                     <div
                       key={`${cuidadora.id}-${eventoIdx}-${linha}`}
-                      className={`${getCor(cuidadora)} text-white rounded px-2 py-1 font-semibold text-xs absolute z-10`}
+                      className={`${getCor(cuidadora)} rounded px-3 py-2 font-bold text-sm absolute z-10`}
                       style={{
                         gridColumn: `${colunaInicial} / span ${diasNaLinha}`,
                         gridRow: linha,
                         top: `${topOffset}px`,
-                        left: '8px',
-                        right: '8px',
-                        height: '24px',
+                        left: leftOffset,
+                        right: rightOffset,
+                        height: '38px',
                       }}
                     >
-                      {linha === linhaInicio && colunaInicial === ((indiceInicio % 7) + 1) ? `${horaInicio} ` : ''}{cuidadora.nome}
+                      {isPrimeiroSegmento ? `${horaInicio} ${cuidadora.nome}` : ''}
                     </div>
                   );
                 }
