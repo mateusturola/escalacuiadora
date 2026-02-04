@@ -185,64 +185,62 @@ export default function CalendarioPage() {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b p-3 md:p-4">
-        <div className="max-w-full mx-auto flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-              {cuidadoras.map(cuidadora => (
-                <p key={cuidadora.id} className="text-xs md:text-sm text-gray-600">
-                  <span className="font-semibold">{cuidadora.nome}:</span> {plantoesAjustados.filter(p => p.cuidadora === cuidadora.nome).length} plantões
-                </p>
-              ))}
+        <div className="max-w-full mx-auto flex flex-col gap-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                {cuidadoras.map(cuidadora => (
+                  <p key={cuidadora.id} className="text-xs md:text-sm text-gray-600">
+                    <span className="font-semibold">{cuidadora.nome}:</span> {plantoesAjustados.filter(p => p.cuidadora === cuidadora.nome).length} plantões
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
-          
-          {/* Navegação */}
-          <div className="flex items-center gap-3 md:gap-4 md:mt-1">
-            <button
-              onClick={mesAnterior}
-              className="p-1.5 md:p-2 hover:bg-gray-100 rounded transition"
-            >
-              <ChevronLeft size={24} />
-            </button>
-            <h2 className="text-base md:text-xl font-bold text-gray-900 md:min-w-56 text-center">
-              {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-            </h2>
-            <button
-              onClick={proximoMes}
-              className="p-1.5 md:p-2 hover:bg-gray-100 rounded transition"
-            >
-              <ChevronRight size={24} />
-            </button>
+
+          {/* Legenda no header */}
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6 pt-2 border-t md:border-t-0">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+              <span className="text-base md:text-lg font-bold text-gray-900">Legenda</span>
+              <div className="flex flex-wrap items-center gap-3 md:gap-4">
+                {cuidadoras.map(cuidadora => {
+                  const totalNoMes = contagemPorCuidadora.find(c => c.cuidadora.id === cuidadora.id)?.total || 0;
+                  if (totalNoMes === 0) return null;
+                  
+                  return (
+                    <div key={cuidadora.id} className="flex items-center gap-2">
+                      <span className={`${getCor(cuidadora)} inline-flex items-center justify-center w-6 h-6 rounded text-sm font-bold`}>
+                        {totalNoMes}
+                      </span>
+                      <span className="text-sm md:text-base font-semibold text-gray-900">{cuidadora.nome}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="p-2 md:p-4">
-        {/* Legenda e contagem */}
-        <div className="bg-white rounded-lg shadow border p-3 md:p-4 mb-4">
-          <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-6">
-            <div className="flex items-center gap-3">
-              <span className="text-base md:text-lg font-bold text-gray-900">Legenda</span>
-              <div className="flex flex-wrap items-center gap-3 md:gap-4">
-                {cuidadoras.map(cuidadora => (
-                  <div key={cuidadora.id} className="flex items-center gap-2">
-                    <span className={`${getCor(cuidadora)} inline-block w-4 h-4 rounded`}></span>
-                    <span className="text-sm md:text-base font-semibold text-gray-900">{cuidadora.nome}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 md:gap-4">
-              <span className="text-base md:text-lg font-bold text-gray-900">Plantões no mês</span>
-              {contagemPorCuidadora.map(item => (
-                <div key={item.cuidadora.id} className="text-sm md:text-base font-semibold text-gray-900">
-                  {item.cuidadora.nome}: {item.total}
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Seletor do mês */}
+        <div className="flex items-center justify-center gap-3 md:gap-4 mb-3">
+          <button
+            onClick={mesAnterior}
+            className="p-1.5 md:p-2 hover:bg-white rounded transition"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <h2 className="text-base md:text-xl font-bold text-gray-900 md:min-w-56 text-center">
+            {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+          </h2>
+          <button
+            onClick={proximoMes}
+            className="p-1.5 md:p-2 hover:bg-white rounded transition"
+          >
+            <ChevronRight size={24} />
+          </button>
         </div>
 
         {/* Calendário compacto (mobile) */}
