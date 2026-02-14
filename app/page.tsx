@@ -50,18 +50,28 @@ export default function CalendarioPage() {
   const ultimoDia = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
   const diasNoMes = ultimoDia.getDate();
   
-  const dias: (Date | null)[] = [];
+  const dias: Date[] = [];
   const diaDaSemana = primeiroDia.getDay();
   
-  // Adicionar espaços vazios antes do primeiro dia
-  for (let i = 0; i < diaDaSemana; i++) {
-    dias.push(null);
+  // Adicionar dias do mês anterior se não começa no domingo
+  if (diaDaSemana > 0) {
+    const ultimoDiaDoMesAnterior = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 0);
+    const diasDoMesAnterior = ultimoDiaDoMesAnterior.getDate();
+    for (let i = diaDaSemana - 1; i >= 0; i--) {
+      const dia = diasDoMesAnterior - i;
+      dias.push(new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1, dia));
+    }
   }
   
   // Adicionar dias do mês
   for (let i = 1; i <= diasNoMes; i++) {
     dias.push(new Date(mesAtual.getFullYear(), mesAtual.getMonth(), i));
   }
+  
+  // Verificar se um dia pertence ao mês atual
+  const isDiaDoMesAtual = (data: Date) => {
+    return data.getMonth() === mesAtual.getMonth() && data.getFullYear() === mesAtual.getFullYear();
+  };
 
   const proximoMes = () => {
     setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1));
@@ -138,8 +148,11 @@ export default function CalendarioPage() {
     const primeiroDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
     const primeiroDiaProximoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
     
-    // Incluir plantão se ele sobrepõe o mês
-    return inicio < primeiroDiaProximoMes && fim > primeiroDiaDoMes;
+    // Incluir também dias do mês anterior se estiverem sendo exibidos
+    const primeiroDiaExibido = dias.length > 0 ? dias[0] : primeiroDiaDoMes;
+    
+    // Incluir plantão se ele sobrepõe os dias sendo exibidos
+    return inicio < primeiroDiaProximoMes && fim > primeiroDiaExibido;
   });
 
   // Contar apenas plantões que COMEÇAM no mês (para evitar dupla contagem)
@@ -246,9 +259,9 @@ export default function CalendarioPage() {
         {/* Calendário compacto (mobile) */}
         <div className="bg-white rounded-lg shadow border mb-4 md:hidden">
           <div className="grid grid-cols-7 bg-gray-100 border-b">
-            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(dia => (
+            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((dia, index) => (
               <div
-                key={dia}
+                key={index}
                 className="py-2 text-center font-bold text-gray-900 border-r text-xs"
               >
                 {dia}
@@ -263,26 +276,15 @@ export default function CalendarioPage() {
           >
             {/* Células de fundo */}
             {dias.map((data, index) => {
-              if (!data) {
-                return (
-                  <div
-                    key={`empty-${index}`}
-                    className="border-r border-b bg-gray-50"
-                    style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
-                  >
-                    <div className="p-1"></div>
-                  </div>
-                );
-              }
-
               const hoje = new Date().toDateString() === data.toDateString();
+              const isDiaAtual = isDiaDoMesAtual(data);
 
               return (
                 <div
                   key={data.toISOString()}
                   className={`border-r border-b p-1 ${
-                    hoje ? 'bg-blue-50' : 'bg-white'
-                  }`}
+                    hoje ? 'bg-blue-50' : isDiaAtual ? 'bg-white' : 'bg-gray-50'
+                  } ${!isDiaAtual ? 'opacity-40' : ''}`}
                   style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
                 >
                   {/* Número do dia */}
@@ -312,9 +314,12 @@ export default function CalendarioPage() {
                 
                 const primeiroDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
                 const ultimoDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+                const primeiroDiaProximoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
+                const primeiroDiaExibido = dias[0];
+                const ultimoDiaExibido = dias[dias.length - 1];
                 
-                if (inicio < primeiroDiaDoMes) {
-                  inicio = primeiroDiaDoMes;
+                if (inicio < primeiroDiaExibido) {
+                  inicio = primeiroDiaExibido;
                 }
                 
                 if (fim > ultimoDiaDoMes) {
@@ -370,6 +375,15 @@ export default function CalendarioPage() {
                   const isPrimeiroSegmento = linha === linhaInicio;
                   const isUltimoSegmento = linha === linhaFim;
 
+                  // Verificar se o evento REALMENTE começa/termina no mês atual
+                  const eventoComecaNoMes = evento.inicio >= primeiroDiaDoMes && evento.inicio < primeiroDiaProximoMes;
+                  const eventoTerminaNoMes = evento.fim >= primeiroDiaDoMes && evento.fim < primeiroDiaProximoMes;
+
+                  // Verificar se este segmento está em dias do mês anterior
+                  const primeiroIndiceDoSegmento = (linha - 1) * 7 + (colunaInicial - 1);
+                  const primeiroDiaDoSegmento = dias[primeiroIndiceDoSegmento];
+                  const isSegmentoDoMesAnterior = primeiroDiaDoSegmento && !isDiaDoMesAtual(primeiroDiaDoSegmento);
+
                   const meiaColuna = `calc((100% / ${diasNaLinha}) / 2 + 2px)`;
                   const leftOffsetBase = isPrimeiroSegmento && startMeio ? meiaColuna : '4px';
                   const rightOffsetBase = isUltimoSegmento && endMeio ? meiaColuna : '4px';
@@ -379,7 +393,7 @@ export default function CalendarioPage() {
                   barras.push(
                     <div
                       key={`${cuidadora.id}-${eventoIdx}-${linha}`}
-                      className={`${getCor(cuidadora)} rounded px-2 py-1 font-bold text-xs z-10 self-start flex items-center justify-center text-center truncate`}
+                      className={`${getCor(cuidadora)} rounded px-2 py-1 font-bold text-xs z-10 self-start flex items-center justify-center text-center truncate ${isSegmentoDoMesAnterior ? 'opacity-40' : ''}`}
                       style={{
                         gridColumn: `${colunaInicial} / span ${diasNaLinha}`,
                         gridRow: linha,
@@ -389,7 +403,11 @@ export default function CalendarioPage() {
                         height: '18px',
                       }}
                     >
-                      {isPrimeiroSegmento && temPlantaoNoMes(cuidadora) ? cuidadora.nome : ''}
+                      {isPrimeiroSegmento && temPlantaoNoMes(cuidadora) && eventoComecaNoMes
+                        ? `${evento.inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ${cuidadora.nome}`
+                        : isPrimeiroSegmento && temPlantaoNoMes(cuidadora)
+                        ? cuidadora.nome
+                        : ''}
                     </div>
                   );
                 }
@@ -403,10 +421,10 @@ export default function CalendarioPage() {
         {/* Calendário */}
         <div className="bg-white rounded-lg shadow overflow-hidden border hidden md:block">
           {/* Cabeçalho dos dias da semana */}
-          <div className="grid grid-cols-7 bg-gray-100 border-b min-w-[860px]">
-            {['DOM.', 'SEG.', 'TER.', 'QUA.', 'QUI.', 'SEX.', 'SAB.'].map(dia => (
+          <div className="grid grid-cols-7 bg-gray-100 border-b min-w-215">
+            {['DOM.', 'SEG.', 'TER.', 'QUA.', 'QUI.', 'SEX.', 'SAB.'].map((dia, index) => (
               <div
-                key={dia}
+                key={index}
                 className="p-2 md:p-3 text-center font-bold text-gray-900 border-r text-xs md:text-base h-12 md:h-14 flex items-center justify-center"
               >
                 {dia}
@@ -417,31 +435,20 @@ export default function CalendarioPage() {
           {/* Grid principal com posicionamento relativo */}
           <div className="overflow-x-auto">
             <div
-              className="relative min-w-[860px]"
+              className="relative min-w-215"
               style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '136px' }}
             >
             {/* Células de fundo */}
             {dias.map((data, index) => {
-              if (!data) {
-                return (
-                  <div
-                    key={`empty-${index}`}
-                    className="border-r border-b bg-gray-50 h-32"
-                    style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
-                  >
-                    <div className="p-2"></div>
-                  </div>
-                );
-              }
-
               const hoje = new Date().toDateString() === data.toDateString();
+              const isDiaAtual = isDiaDoMesAtual(data);
 
               return (
                 <div
                   key={data.toISOString()}
                   className={`border-r border-b h-32 p-2 ${
-                    hoje ? 'bg-blue-50' : 'bg-white'
-                  }`}
+                    hoje ? 'bg-blue-50' : isDiaAtual ? 'bg-white' : 'bg-gray-50'
+                  } ${!isDiaAtual ? 'opacity-40' : ''}`}
                   style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
                 >
                   {/* Número do dia */}
@@ -473,9 +480,12 @@ export default function CalendarioPage() {
                 // Se o plantão começa antes do mês, ajustar para o primeiro dia
                 const primeiroDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
                 const ultimoDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
+                const primeiroDiaProximoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
+                const primeiroDiaExibido = dias[0];
+                const ultimoDiaExibido = dias[dias.length - 1];
                 
-                if (inicio < primeiroDiaDoMes) {
-                  inicio = primeiroDiaDoMes;
+                if (inicio < primeiroDiaExibido) {
+                  inicio = primeiroDiaExibido;
                 }
                 
                 // Se o plantão termina depois do mês, ajustar para o último dia
@@ -541,6 +551,15 @@ export default function CalendarioPage() {
                   const isPrimeiroSegmento = linha === linhaInicio;
                   const isUltimoSegmento = linha === linhaFim;
 
+                  // Verificar se o evento REALMENTE começa/termina no mês atual
+                  const eventoComecaNoMes = evento.inicio >= primeiroDiaDoMes && evento.inicio < primeiroDiaProximoMes;
+                  const eventoTerminaNoMes = evento.fim >= primeiroDiaDoMes && evento.fim < primeiroDiaProximoMes;
+
+                  // Verificar se este segmento está em dias do mês anterior
+                  const primeiroIndiceDoSegmento = (linha - 1) * 7 + (colunaInicial - 1);
+                  const primeiroDiaDoSegmento = dias[primeiroIndiceDoSegmento];
+                  const isSegmentoDoMesAnterior = primeiroDiaDoSegmento && !isDiaDoMesAtual(primeiroDiaDoSegmento);
+
                   const meiaColuna = `calc((100% / ${diasNaLinha}) / 2 + 4px)`;
                   const leftOffsetBase = isPrimeiroSegmento && startMeio ? meiaColuna : '8px';
                   const rightOffsetBase = isUltimoSegmento && endMeio ? meiaColuna : '8px';
@@ -550,7 +569,7 @@ export default function CalendarioPage() {
                   barras.push(
                     <div
                       key={`${cuidadora.id}-${eventoIdx}-${linha}`}
-                      className={`${getCor(cuidadora)} rounded px-3 py-2 font-bold text-sm z-10 self-start flex items-center justify-center text-center`}
+                      className={`${getCor(cuidadora)} rounded px-3 py-2 font-bold text-sm z-10 self-start flex items-center justify-center text-center ${isSegmentoDoMesAnterior ? 'opacity-40' : ''}`}
                       style={{
                         gridColumn: `${colunaInicial} / span ${diasNaLinha}`,
                         gridRow: linha,
@@ -560,7 +579,11 @@ export default function CalendarioPage() {
                         height: '28px',
                       }}
                     >
-                      {isPrimeiroSegmento && temPlantaoNoMes(cuidadora) ? cuidadora.nome : ''}
+                      {isPrimeiroSegmento && temPlantaoNoMes(cuidadora) && eventoComecaNoMes
+                        ? `${evento.inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ${cuidadora.nome}`
+                        : isPrimeiroSegmento && temPlantaoNoMes(cuidadora)
+                        ? cuidadora.nome
+                        : ''}
                     </div>
                   );
                 }
