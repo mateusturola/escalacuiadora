@@ -25,7 +25,10 @@ interface Agendamento {
 export default function CalendarioPage() {
   const [cuidadoras, setCuidadoras] = useState<Cuidadora[]>([]);
   const [plantoes, setPlantoes] = useState<Plantao[]>([]);
-  const [mesAtual, setMesAtual] = useState(new Date(2026, 1)); // Fevereiro 2026
+  const [mesAtual, setMesAtual] = useState(() => {
+    const hoje = new Date();
+    return new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,52 +88,13 @@ export default function CalendarioPage() {
     if (cuidadora.cor === 'teal') return 'bg-teal-100 border border-teal-400 text-teal-900';
     if (cuidadora.cor === 'blue') return 'bg-blue-100 border border-blue-400 text-blue-900';
     if (cuidadora.cor === 'pink') return 'bg-fuchsia-100 border border-fuchsia-400 text-fuchsia-900';
+    if (cuidadora.cor === 'purple') return 'bg-purple-100 border border-purple-400 text-purple-900';
+    if (cuidadora.cor === 'green') return 'bg-green-100 border border-green-400 text-green-900';
     return 'bg-gray-100 border border-gray-400 text-gray-900';
   };
 
-  const inicioBruna = new Date('2026-02-08T18:00:00');
-  const fimFeriasJanaina = new Date('2026-03-08T18:00:00');
-  const ms48h = 48 * 60 * 60 * 1000;
-
-  const ajustarCuidadoraPorInicio = (plantao: Plantao, inicio: Date) => {
-    if (inicio < inicioBruna) return plantao.cuidadora;
-
-    const indiceBloco = Math.floor((inicio.getTime() - inicioBruna.getTime()) / ms48h);
-
-    if (inicio < fimFeriasJanaina) {
-      return indiceBloco % 2 === 0 ? 'Bruna' : 'Rosario';
-    }
-
-    return indiceBloco % 2 === 0 ? 'Bruna' : 'Janaina';
-  };
-
-  const plantoesAjustados = plantoes.flatMap(plantao => {
-    const inicio = new Date(plantao.inicio);
-    const fim = new Date(plantao.fim);
-    const cortes = [inicioBruna, fimFeriasJanaina]
-      .filter(corte => corte > inicio && corte < fim)
-      .sort((a, b) => a.getTime() - b.getTime());
-
-    let inicioSegmento = inicio;
-    const segmentos: Plantao[] = [];
-
-    for (const corte of cortes) {
-      segmentos.push({
-        inicio: inicioSegmento.toISOString(),
-        fim: corte.toISOString(),
-        cuidadora: ajustarCuidadoraPorInicio(plantao, inicioSegmento),
-      });
-      inicioSegmento = corte;
-    }
-
-    segmentos.push({
-      inicio: inicioSegmento.toISOString(),
-      fim: fim.toISOString(),
-      cuidadora: ajustarCuidadoraPorInicio(plantao, inicioSegmento),
-    });
-
-    return segmentos;
-  });
+  // Usar plantões diretamente do JSON
+  const plantoesAjustados = plantoes;
 
   // Agrupar eventos contínuos
   const getEventosPorCuidadora = (cuidadora: Cuidadora) => {
@@ -161,25 +125,6 @@ export default function CalendarioPage() {
     return inicio.getFullYear() === mesAtual.getFullYear() && inicio.getMonth() === mesAtual.getMonth();
   });
 
-  const contagemPorCuidadora = cuidadoras.map(cuidadora => ({
-    cuidadora,
-    total: plantoesQueComecamNoMes.filter(p => p.cuidadora === cuidadora.nome).length
-  }));
-
-  const temPlantaoNoMes = (cuidadora: Cuidadora) =>
-    plantoesDoMes.some(p => p.cuidadora === cuidadora.nome);
-
-  const getPlantaoDoDia = (data: Date) => {
-    const inicioDia = new Date(data.getFullYear(), data.getMonth(), data.getDate());
-    const fimDia = new Date(data.getFullYear(), data.getMonth(), data.getDate(), 23, 59, 59, 999);
-
-    return plantoesDoMes.find(plantao => {
-      const inicio = new Date(plantao.inicio);
-      const fim = new Date(plantao.fim);
-      return inicio <= fimDia && fim >= inicioDia;
-    });
-  };
-
   const getCuidadoraPorNome = (nome: string) =>
     cuidadoras.find(c => c.nome === nome);
 
@@ -194,65 +139,121 @@ export default function CalendarioPage() {
     );
   }
 
+  const agora = new Date();
+  const plantaoAtivo = plantoesAjustados.find(p => {
+    const ini = new Date(p.inicio);
+    const fim = new Date(p.fim);
+    return ini <= agora && fim > agora;
+  });
+  const proximoPlantao = plantoesAjustados.find(p => new Date(p.inicio) > agora);
+
+  const formatarDataCurta = (d: Date) =>
+    d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+  const formatarHora = (d: Date) =>
+    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  const irParaHoje = () => {
+    const h = new Date();
+    setMesAtual(new Date(h.getFullYear(), h.getMonth(), 1));
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b p-3 md:p-4">
-        <div className="max-w-full mx-auto flex flex-col gap-3">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                {cuidadoras.map(cuidadora => (
-                  <p key={cuidadora.id} className="text-xs md:text-sm text-gray-600">
-                    <span className="font-semibold">{cuidadora.nome}:</span> {plantoesAjustados.filter(p => p.cuidadora === cuidadora.nome).length} plantões
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Legenda no header */}
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6 pt-2 border-t md:border-t-0">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
-              <span className="text-base md:text-lg font-bold text-gray-900">Legenda</span>
-              <div className="flex flex-wrap items-center gap-3 md:gap-4">
-                {cuidadoras.map(cuidadora => {
-                  const totalNoMes = contagemPorCuidadora.find(c => c.cuidadora.id === cuidadora.id)?.total || 0;
-                  if (totalNoMes === 0) return null;
-                  
-                  return (
-                    <div key={cuidadora.id} className="flex items-center gap-2">
-                      <span className={`${getCor(cuidadora)} inline-flex items-center justify-center w-6 h-6 rounded text-sm font-bold`}>
-                        {totalNoMes}
-                      </span>
-                      <span className="text-sm md:text-base font-semibold text-gray-900">{cuidadora.nome}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+        <div className="max-w-full mx-auto">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
+          <p className="text-xs md:text-sm text-gray-600 mt-1">
+            36h × 12h até 31/05/2026 · 24h × 48h a partir de 01/06/2026 (troca às 18h)
+          </p>
         </div>
       </div>
 
-      <div className="p-2 md:p-4">
+      <div className="p-2 md:p-4 space-y-4">
+        {/* Card "Hoje" */}
+        <div className="bg-white rounded-lg shadow border p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+              Hoje · {formatarDataCurta(agora)}
+            </h2>
+          </div>
+          {plantaoAtivo ? (() => {
+            const cuidadora = getCuidadoraPorNome(plantaoAtivo.cuidadora);
+            const fim = new Date(plantaoAtivo.fim);
+            const horasRestantes = Math.max(0, Math.round((fim.getTime() - agora.getTime()) / 3600000));
+            const terminaHoje = fim.toDateString() === agora.toDateString();
+            return (
+              <div className={`${cuidadora ? getCor(cuidadora) : 'bg-gray-100 border border-gray-300'} rounded-lg p-4`}>
+                <div className="text-2xl font-bold">{plantaoAtivo.cuidadora}</div>
+                <div className="text-sm mt-1">
+                  Termina {terminaHoje ? 'hoje' : 'amanhã'} às {formatarHora(fim)} · {horasRestantes}h restantes
+                </div>
+              </div>
+            );
+          })() : (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-600 text-sm">
+              Nenhum plantão ativo no momento.
+            </div>
+          )}
+          {proximoPlantao && (
+            <div className="mt-3 pt-3 border-t text-sm text-gray-700">
+              <span className="font-semibold text-gray-500 uppercase text-xs tracking-wide mr-2">Próximo:</span>
+              {formatarDataCurta(new Date(proximoPlantao.inicio))} · <span className="font-semibold">{proximoPlantao.cuidadora}</span> às {formatarHora(new Date(proximoPlantao.inicio))}
+            </div>
+          )}
+        </div>
+
+        {/* Estatísticas compactas */}
+        <div className="bg-white rounded-lg shadow border p-3 md:p-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+              {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}:
+            </span>
+            {cuidadoras.map(cuidadora => {
+              const plantoesQueComecam = plantoesQueComecamNoMes.filter(p => p.cuidadora === cuidadora.nome);
+              const quantidade = plantoesQueComecam.length;
+              if (quantidade === 0) return null;
+              const totalHoras = plantoesQueComecam.reduce((acc, p) => {
+                return acc + (new Date(p.fim).getTime() - new Date(p.inicio).getTime()) / 3600000;
+              }, 0);
+              return (
+                <div key={cuidadora.id} className="flex items-center gap-2">
+                  <span className={`${getCor(cuidadora)} inline-flex items-center justify-center w-6 h-6 rounded text-sm font-bold`}>
+                    {quantidade}
+                  </span>
+                  <span className="text-sm text-gray-800">
+                    <span className="font-semibold">{cuidadora.nome}</span> · {Math.round(totalHoras)}h
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Seletor do mês */}
-        <div className="flex items-center justify-center gap-3 md:gap-4 mb-3">
+        <div className="flex items-center justify-center gap-2 md:gap-3 mb-1">
           <button
             onClick={mesAnterior}
             className="p-1.5 md:p-2 hover:bg-white rounded transition"
+            aria-label="Mês anterior"
           >
             <ChevronLeft size={24} />
           </button>
-          <h2 className="text-base md:text-xl font-bold text-gray-900 md:min-w-56 text-center">
+          <h2 className="text-base md:text-xl font-bold text-gray-900 md:min-w-56 text-center capitalize">
             {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
           </h2>
           <button
             onClick={proximoMes}
             className="p-1.5 md:p-2 hover:bg-white rounded transition"
+            aria-label="Próximo mês"
           >
             <ChevronRight size={24} />
+          </button>
+          <button
+            onClick={irParaHoje}
+            className="ml-2 px-3 py-1.5 text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 rounded transition"
+          >
+            Hoje
           </button>
         </div>
 
@@ -271,149 +272,80 @@ export default function CalendarioPage() {
 
           {/* Grid principal mobile */}
           <div
-            className="relative"
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '100px' }}
+            className="grid grid-cols-7 gap-0"
           >
-            {/* Células de fundo */}
+            {/* Células com barras por dia */}
             {dias.map((data, index) => {
               const hoje = new Date().toDateString() === data.toDateString();
               const isDiaAtual = isDiaDoMesAtual(data);
+              
+              // Encontrar TODOS os plantões que acontecem neste dia
+              const plantoesDoDia = plantoesDoMes.filter(plantao => {
+                const inicio = new Date(plantao.inicio);
+                const fim = new Date(plantao.fim);
+                const inicioDoDia = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+                const fimDoDia = new Date(data.getFullYear(), data.getMonth(), data.getDate(), 23, 59, 59);
+                
+                return inicio <= fimDoDia && fim >= inicioDoDia;
+              });
 
               return (
                 <div
                   key={data.toISOString()}
-                  className={`border-r border-b p-1 ${
-                    hoje ? 'bg-blue-50' : isDiaAtual ? 'bg-white' : 'bg-gray-50'
+                  className={`border-r border-b p-1 min-h-24 flex flex-col gap-1 relative ${
+                    hoje ? 'bg-blue-50 ring-2 ring-blue-500 ring-inset z-10' : isDiaAtual ? 'bg-white' : 'bg-gray-50'
                   } ${!isDiaAtual ? 'opacity-40' : ''}`}
-                  style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
                 >
                   {/* Número do dia */}
-                  <div className={`text-xs font-bold relative z-20 inline-flex px-1 rounded bg-white/90 ${
-                    hoje ? 'text-blue-700' : 'text-gray-900'
-                  }`}>
+                  <div className={hoje
+                    ? 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold'
+                    : 'text-xs font-bold text-gray-900'
+                  }>
                     {data.getDate()}
                   </div>
+
+                  {/* Mostrar plantões do dia */}
+                  {plantoesDoDia.map((plantao, idx) => {
+                    const cuidadora = getCuidadoraPorNome(plantao.cuidadora);
+                    if (!cuidadora) return null;
+                    
+                    const inicio = new Date(plantao.inicio);
+                    const fim = new Date(plantao.fim);
+                    const horas = Math.round((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60));
+                    
+                    // Verificar se começa ou termina neste dia
+                    const comecaHoje = inicio.toDateString() === data.toDateString();
+                    const terminaHoje = fim.toDateString() === data.toDateString();
+                    
+                    let texto = '';
+                    let subtexto = '';
+                    if (comecaHoje && terminaHoje) {
+                      texto = `${inicio.getHours()}h-${fim.getHours()}h`;
+                      subtexto = `(${horas}h)`;
+                    } else if (comecaHoje) {
+                      texto = `↓ Inicia ${inicio.getHours()}:00`;
+                      subtexto = `(${horas}h totais)`;
+                    } else if (terminaHoje) {
+                      texto = `↑ Termina ${fim.getHours()}:00`;
+                      subtexto = `(${horas}h totais)`;
+                    } else {
+                      texto = 'Trabalhando';
+                      subtexto = `(Plantão ${horas}h)`;
+                    }
+                    
+                    return (
+                      <div
+                        key={`plantao-${idx}`}
+                        className={`${getCor(cuidadora)} rounded px-1 py-1 text-[9px] font-bold text-center shadow-sm`}
+                      >
+                        <div>{cuidadora.nome}</div>
+                        <div className="text-[8px]">{texto}</div>
+                        <div className="text-[7px] mt-0.5">{subtexto}</div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
-            })}
-
-            {/* Eventos como barras (mobile compactado) */}
-            {cuidadoras.map((cuidadora, cuidadoraIdx) => {
-              const eventosDoMes = plantoesDoMes
-                .filter(p => p.cuidadora === cuidadora.nome)
-                .map(p => ({
-                  inicio: new Date(p.inicio),
-                  fim: new Date(p.fim)
-                }));
-              
-              return eventosDoMes.map((evento, eventoIdx) => {
-                const barras = [];
-
-                let inicio = evento.inicio;
-                let fim = evento.fim;
-                
-                const primeiroDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
-                const ultimoDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
-                const primeiroDiaProximoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
-                const primeiroDiaExibido = dias[0];
-                const ultimoDiaExibido = dias[dias.length - 1];
-                
-                if (inicio < primeiroDiaExibido) {
-                  inicio = primeiroDiaExibido;
-                }
-                
-                if (fim > ultimoDiaDoMes) {
-                  fim = new Date(ultimoDiaDoMes.getFullYear(), ultimoDiaDoMes.getMonth(), ultimoDiaDoMes.getDate(), 23, 59, 59);
-                }
-
-                const inicioDia = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
-                const fimDia = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
-                const fimInclusivo = new Date(fimDia);
-
-                if (fim.getHours() === 0 && fim.getMinutes() === 0 && fim.getSeconds() === 0) {
-                  fimInclusivo.setDate(fimInclusivo.getDate() - 1);
-                }
-
-                const indiceInicio = dias.findIndex(d => d && d.toDateString() === inicioDia.toDateString());
-
-                if (indiceInicio === -1) return null;
-
-                let indiceFim = dias.findIndex(d => d && d.toDateString() === fimInclusivo.toDateString());
-                
-                if (indiceFim === -1) {
-                  indiceFim = dias.length - 1;
-                }
-
-                const linhaInicio = Math.floor(indiceInicio / 7) + 1;
-                const linhaFim = Math.floor(indiceFim / 7) + 1;
-                const startMeio = inicio.getHours() >= 12;
-                const endMeio = fim.getHours() >= 12;
-
-                for (let linha = linhaInicio; linha <= linhaFim; linha++) {
-                  let colunaInicial, colunaFinal;
-                  
-                  if (linha === linhaInicio) {
-                    colunaInicial = (indiceInicio % 7) + 1;
-                    if (linha === linhaFim) {
-                      colunaFinal = (indiceFim % 7) + 1;
-                    } else {
-                      colunaFinal = 7;
-                    }
-                  } else if (linha === linhaFim) {
-                    colunaInicial = 1;
-                    colunaFinal = (indiceFim % 7) + 1;
-                  } else {
-                    colunaInicial = 1;
-                    colunaFinal = 7;
-                  }
-
-                  const diasNaLinha = colunaFinal - colunaInicial + 1;
-                  const baseOffset = 32;
-                  const rowSpacing = 22;
-                  const marginTop = baseOffset + (cuidadoraIdx * rowSpacing);
-
-                  const isPrimeiroSegmento = linha === linhaInicio;
-                  const isUltimoSegmento = linha === linhaFim;
-
-                  // Verificar se o evento REALMENTE começa/termina no mês atual
-                  const eventoComecaNoMes = evento.inicio >= primeiroDiaDoMes && evento.inicio < primeiroDiaProximoMes;
-                  const eventoTerminaNoMes = evento.fim >= primeiroDiaDoMes && evento.fim < primeiroDiaProximoMes;
-
-                  // Verificar se este segmento está em dias do mês anterior
-                  const primeiroIndiceDoSegmento = (linha - 1) * 7 + (colunaInicial - 1);
-                  const primeiroDiaDoSegmento = dias[primeiroIndiceDoSegmento];
-                  const isSegmentoDoMesAnterior = primeiroDiaDoSegmento && !isDiaDoMesAtual(primeiroDiaDoSegmento);
-
-                  const meiaColuna = `calc((100% / ${diasNaLinha}) / 2 + 2px)`;
-                  const leftOffsetBase = isPrimeiroSegmento && startMeio ? meiaColuna : '4px';
-                  const rightOffsetBase = isUltimoSegmento && endMeio ? meiaColuna : '4px';
-                  const leftOffset = diasNaLinha === 1 ? '4px' : leftOffsetBase;
-                  const rightOffset = diasNaLinha === 1 ? '4px' : rightOffsetBase;
-
-                  barras.push(
-                    <div
-                      key={`${cuidadora.id}-${eventoIdx}-${linha}`}
-                      className={`${getCor(cuidadora)} rounded px-2 py-1 font-bold text-xs z-10 self-start flex items-center justify-center text-center truncate ${isSegmentoDoMesAnterior ? 'opacity-40' : ''}`}
-                      style={{
-                        gridColumn: `${colunaInicial} / span ${diasNaLinha}`,
-                        gridRow: linha,
-                        marginTop: `${marginTop}px`,
-                        marginLeft: leftOffset,
-                        marginRight: rightOffset,
-                        height: '18px',
-                      }}
-                    >
-                      {isPrimeiroSegmento && temPlantaoNoMes(cuidadora) && eventoComecaNoMes
-                        ? `${evento.inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ${cuidadora.nome}`
-                        : isPrimeiroSegmento && temPlantaoNoMes(cuidadora)
-                        ? cuidadora.nome
-                        : ''}
-                    </div>
-                  );
-                }
-
-                return barras;
-              });
             })}
           </div>
         </div>
@@ -432,165 +364,79 @@ export default function CalendarioPage() {
             ))}
           </div>
 
-          {/* Grid principal com posicionamento relativo */}
+          {/* Grid principal desktop */}
           <div className="overflow-x-auto">
             <div
-              className="relative min-w-215"
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '136px' }}
+              className="grid grid-cols-7 min-w-215"
             >
-            {/* Células de fundo */}
-            {dias.map((data, index) => {
-              const hoje = new Date().toDateString() === data.toDateString();
-              const isDiaAtual = isDiaDoMesAtual(data);
-
-              return (
-                <div
-                  key={data.toISOString()}
-                  className={`border-r border-b h-32 p-2 ${
-                    hoje ? 'bg-blue-50' : isDiaAtual ? 'bg-white' : 'bg-gray-50'
-                  } ${!isDiaAtual ? 'opacity-40' : ''}`}
-                  style={{ gridColumn: (index % 7) + 1, gridRow: Math.floor(index / 7) + 1 }}
-                >
-                  {/* Número do dia */}
-                  <div className={`text-base font-bold relative z-20 inline-flex px-1 rounded bg-white/90 ${
-                    hoje ? 'text-blue-700' : 'text-gray-900'
-                  }`}>
-                    {data.getDate()}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Eventos como barras que atravessam dias */}
-            {cuidadoras.map((cuidadora, cuidadoraIdx) => {
-              // Usar apenas plantões que sobrepõem o mês
-              const eventosDoMes = plantoesDoMes
-                .filter(p => p.cuidadora === cuidadora.nome)
-                .map(p => ({
-                  inicio: new Date(p.inicio),
-                  fim: new Date(p.fim)
-                }));
-              
-              return eventosDoMes.map((evento, eventoIdx) => {
-                const barras = [];
-
-                let inicio = evento.inicio;
-                let fim = evento.fim;
+              {/* Células com barras por dia */}
+              {dias.map((data, index) => {
+                const hoje = new Date().toDateString() === data.toDateString();
+                const isDiaAtual = isDiaDoMesAtual(data);
                 
-                // Se o plantão começa antes do mês, ajustar para o primeiro dia
-                const primeiroDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
-                const ultimoDiaDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
-                const primeiroDiaProximoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
-                const primeiroDiaExibido = dias[0];
-                const ultimoDiaExibido = dias[dias.length - 1];
-                
-                if (inicio < primeiroDiaExibido) {
-                  inicio = primeiroDiaExibido;
-                }
-                
-                // Se o plantão termina depois do mês, ajustar para o último dia
-                if (fim > ultimoDiaDoMes) {
-                  fim = new Date(ultimoDiaDoMes.getFullYear(), ultimoDiaDoMes.getMonth(), ultimoDiaDoMes.getDate(), 23, 59, 59);
-                }
-
-                const inicioDia = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
-                const fimDia = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
-                const fimInclusivo = new Date(fimDia);
-
-                if (fim.getHours() === 0 && fim.getMinutes() === 0 && fim.getSeconds() === 0) {
-                  fimInclusivo.setDate(fimInclusivo.getDate() - 1);
-                }
-
-                // Encontrar a posição inicial do evento no array dias
-                const indiceInicio = dias.findIndex(d => d && d.toDateString() === inicioDia.toDateString());
-
-                if (indiceInicio === -1) return null;
-
-                // Procurar o fim no mês atual
-                let indiceFim = dias.findIndex(d => d && d.toDateString() === fimInclusivo.toDateString());
-                
-                // Se não encontrar, usar o último dia do mês
-                if (indiceFim === -1) {
-                  indiceFim = dias.length - 1;
-                }
-
-                const linhaInicio = Math.floor(indiceInicio / 7) + 1;
-                const linhaFim = Math.floor(indiceFim / 7) + 1;
-                const startMeio = inicio.getHours() >= 12;
-                const endMeio = fim.getHours() >= 12;
-
-                // Renderizar uma barra para cada linha que o evento atravessa
-                for (let linha = linhaInicio; linha <= linhaFim; linha++) {
-                  let colunaInicial, colunaFinal;
+                // Encontrar TODOS os plantões que acontecem neste dia
+                const plantoesDoDia = plantoesDoMes.filter(plantao => {
+                  const inicio = new Date(plantao.inicio);
+                  const fim = new Date(plantao.fim);
+                  const inicioDoDia = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+                  const fimDoDia = new Date(data.getFullYear(), data.getMonth(), data.getDate(), 23, 59, 59);
                   
-                  if (linha === linhaInicio) {
-                    // Primeira linha: começa na coluna do evento
-                    colunaInicial = (indiceInicio % 7) + 1;
-                    if (linha === linhaFim) {
-                      // Se também é a última linha, termina na coluna final
-                      colunaFinal = (indiceFim % 7) + 1;
-                    } else {
-                      // Senão, vai até o final da semana
-                      colunaFinal = 7;
-                    }
-                  } else if (linha === linhaFim) {
-                    // Última linha: começa na coluna 1
-                    colunaInicial = 1;
-                    colunaFinal = (indiceFim % 7) + 1;
-                  } else {
-                    // Linhas intermediárias: semana completa
-                    colunaInicial = 1;
-                    colunaFinal = 7;
-                  }
+                  return inicio <= fimDoDia && fim >= inicioDoDia;
+                });
 
-                  const diasNaLinha = colunaFinal - colunaInicial + 1;
-                  const baseOffset = 32;
-                  const rowSpacing = 28;
-                  const marginTop = baseOffset + (cuidadoraIdx * rowSpacing);
-
-                  const isPrimeiroSegmento = linha === linhaInicio;
-                  const isUltimoSegmento = linha === linhaFim;
-
-                  // Verificar se o evento REALMENTE começa/termina no mês atual
-                  const eventoComecaNoMes = evento.inicio >= primeiroDiaDoMes && evento.inicio < primeiroDiaProximoMes;
-                  const eventoTerminaNoMes = evento.fim >= primeiroDiaDoMes && evento.fim < primeiroDiaProximoMes;
-
-                  // Verificar se este segmento está em dias do mês anterior
-                  const primeiroIndiceDoSegmento = (linha - 1) * 7 + (colunaInicial - 1);
-                  const primeiroDiaDoSegmento = dias[primeiroIndiceDoSegmento];
-                  const isSegmentoDoMesAnterior = primeiroDiaDoSegmento && !isDiaDoMesAtual(primeiroDiaDoSegmento);
-
-                  const meiaColuna = `calc((100% / ${diasNaLinha}) / 2 + 4px)`;
-                  const leftOffsetBase = isPrimeiroSegmento && startMeio ? meiaColuna : '8px';
-                  const rightOffsetBase = isUltimoSegmento && endMeio ? meiaColuna : '8px';
-                  const leftOffset = diasNaLinha === 1 ? '8px' : leftOffsetBase;
-                  const rightOffset = diasNaLinha === 1 ? '8px' : rightOffsetBase;
-
-                  barras.push(
-                    <div
-                      key={`${cuidadora.id}-${eventoIdx}-${linha}`}
-                      className={`${getCor(cuidadora)} rounded px-3 py-2 font-bold text-sm z-10 self-start flex items-center justify-center text-center ${isSegmentoDoMesAnterior ? 'opacity-40' : ''}`}
-                      style={{
-                        gridColumn: `${colunaInicial} / span ${diasNaLinha}`,
-                        gridRow: linha,
-                        marginTop: `${marginTop}px`,
-                        marginLeft: leftOffset,
-                        marginRight: rightOffset,
-                        height: '28px',
-                      }}
-                    >
-                      {isPrimeiroSegmento && temPlantaoNoMes(cuidadora) && eventoComecaNoMes
-                        ? `${evento.inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ${cuidadora.nome}`
-                        : isPrimeiroSegmento && temPlantaoNoMes(cuidadora)
-                        ? cuidadora.nome
-                        : ''}
+                return (
+                  <div
+                    key={data.toISOString()}
+                    className={`border-r border-b p-2 min-h-32 flex flex-col gap-2 relative ${
+                      hoje ? 'bg-blue-50 ring-2 ring-blue-500 ring-inset z-10' : isDiaAtual ? 'bg-white' : 'bg-gray-50'
+                    } ${!isDiaAtual ? 'opacity-40' : ''}`}
+                  >
+                    {/* Número do dia */}
+                    <div className={hoje
+                      ? 'inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold'
+                      : 'text-base font-bold text-gray-900'
+                    }>
+                      {data.getDate()}
                     </div>
-                  );
-                }
-
-                return barras;
-              });
-            })}
+                    
+                    {/* Mostrar plantões do dia */}
+                    {plantoesDoDia.map((plantao, idx) => {
+                      const cuidadora = getCuidadoraPorNome(plantao.cuidadora);
+                      if (!cuidadora) return null;
+                      
+                      const inicio = new Date(plantao.inicio);
+                      const fim = new Date(plantao.fim);
+                      const horas = Math.round((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60));
+                      
+                      // Verificar se começa ou termina neste dia
+                      const comecaHoje = inicio.toDateString() === data.toDateString();
+                      const terminaHoje = fim.toDateString() === data.toDateString();
+                      
+                      let texto = '';
+                      if (comecaHoje && terminaHoje) {
+                        texto = `${inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${fim.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                      } else if (comecaHoje) {
+                        texto = `↓ Inicia ${inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                      } else if (terminaHoje) {
+                        texto = `↑ Termina ${fim.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                      } else {
+                        texto = 'Trabalhando';
+                      }
+                      
+                      return (
+                        <div
+                          key={`plantao-${idx}`}
+                          className={`${getCor(cuidadora)} rounded-lg px-2 py-2 text-xs font-bold text-center shadow-md`}
+                        >
+                          <div>{cuidadora.nome}</div>
+                          <div className="text-[10px] mt-0.5">{texto}</div>
+                          <div className="text-[9px] opacity-75 mt-0.5">({horas}h totais)</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
