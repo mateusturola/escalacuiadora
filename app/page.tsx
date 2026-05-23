@@ -139,91 +139,93 @@ export default function CalendarioPage() {
     );
   }
 
-  const agora = new Date();
-  const plantaoAtivo = plantoesAjustados.find(p => {
-    const ini = new Date(p.inicio);
-    const fim = new Date(p.fim);
-    return ini <= agora && fim > agora;
-  });
-  const proximoPlantao = plantoesAjustados.find(p => new Date(p.inicio) > agora);
-
-  const formatarDataCurta = (d: Date) =>
-    d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-  const formatarHora = (d: Date) =>
-    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-  const irParaHoje = () => {
-    const h = new Date();
-    setMesAtual(new Date(h.getFullYear(), h.getMonth(), 1));
-  };
-
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b p-3 md:p-4">
-        <div className="max-w-full mx-auto">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
-          <p className="text-xs md:text-sm text-gray-600 mt-1">
-            36h × 12h até 31/05/2026 · 24h × 48h a partir de 01/06/2026 (troca às 18h)
-          </p>
+        <div className="max-w-full mx-auto flex flex-col gap-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Escala de Cuidadoras</h1>
+              <p className="text-sm text-gray-600 mt-1">
+                36h × 12h até 31/05/2026 · 24h × 48h a partir de 01/06/2026 (troca às 18h)
+              </p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                {cuidadoras.map(cuidadora => {
+                  const total = plantoesAjustados.filter(p => p.cuidadora === cuidadora.nome).length;
+                  if (total === 0) return null;
+                  return (
+                    <p key={cuidadora.id} className="text-xs md:text-sm text-gray-600">
+                      <span className="font-semibold">{cuidadora.nome}:</span> {total} plantões
+                    </p>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Legenda no header */}
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6 pt-2 border-t md:border-t-0">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+              <span className="text-base md:text-lg font-bold text-gray-900">Legenda</span>
+              <div className="flex flex-wrap items-center gap-3 md:gap-4">
+                {cuidadoras.map(cuidadora => {
+                  const totalNoMes = plantoesQueComecamNoMes.filter(p => p.cuidadora === cuidadora.nome).length;
+                  if (totalNoMes === 0) return null;
+
+                  return (
+                    <div key={cuidadora.id} className="flex items-center gap-2">
+                      <span className={`${getCor(cuidadora)} inline-flex items-center justify-center w-6 h-6 rounded text-sm font-bold`}>
+                        {totalNoMes}
+                      </span>
+                      <span className="text-sm md:text-base font-semibold text-gray-900">{cuidadora.nome}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="p-2 md:p-4 space-y-4">
-        {/* Card "Hoje" */}
-        <div className="bg-white rounded-lg shadow border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Hoje · {formatarDataCurta(agora)}
-            </h2>
-          </div>
-          {plantaoAtivo ? (() => {
-            const cuidadora = getCuidadoraPorNome(plantaoAtivo.cuidadora);
-            const fim = new Date(plantaoAtivo.fim);
-            const horasRestantes = Math.max(0, Math.round((fim.getTime() - agora.getTime()) / 3600000));
-            const terminaHoje = fim.toDateString() === agora.toDateString();
-            return (
-              <div className={`${cuidadora ? getCor(cuidadora) : 'bg-gray-100 border border-gray-300'} rounded-lg p-4`}>
-                <div className="text-2xl font-bold">{plantaoAtivo.cuidadora}</div>
-                <div className="text-sm mt-1">
-                  Termina {terminaHoje ? 'hoje' : 'amanhã'} às {formatarHora(fim)} · {horasRestantes}h restantes
-                </div>
-              </div>
-            );
-          })() : (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-600 text-sm">
-              Nenhum plantão ativo no momento.
-            </div>
-          )}
-          {proximoPlantao && (
-            <div className="mt-3 pt-3 border-t text-sm text-gray-700">
-              <span className="font-semibold text-gray-500 uppercase text-xs tracking-wide mr-2">Próximo:</span>
-              {formatarDataCurta(new Date(proximoPlantao.inicio))} · <span className="font-semibold">{proximoPlantao.cuidadora}</span> às {formatarHora(new Date(proximoPlantao.inicio))}
-            </div>
-          )}
-        </div>
-
-        {/* Estatísticas compactas */}
-        <div className="bg-white rounded-lg shadow border p-3 md:p-4">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}:
-            </span>
+      <div className="p-2 md:p-4">
+        {/* Estatísticas por Cuidadora */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+          <h3 className="text-lg font-bold text-gray-900 mb-3">Estatísticas do Mês</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {cuidadoras.map(cuidadora => {
               const plantoesQueComecam = plantoesQueComecamNoMes.filter(p => p.cuidadora === cuidadora.nome);
-              const quantidade = plantoesQueComecam.length;
-              if (quantidade === 0) return null;
+              const quantidadePlantoes = plantoesQueComecam.length;
+              if (quantidadePlantoes === 0) return null;
+
               const totalHoras = plantoesQueComecam.reduce((acc, p) => {
                 return acc + (new Date(p.fim).getTime() - new Date(p.inicio).getTime()) / 3600000;
               }, 0);
+
+              const usaPadraoNovo = plantoesQueComecam[0].inicio >= '2026-06-01T18:00:00';
+              const horarioStr = usaPadraoNovo ? '18:00 às 18:00 do dia seguinte' : '18:00 às 06:00';
+              const duracaoStr = usaPadraoNovo ? '24 horas por plantão (24h × 48h)' : '36 horas por plantão (36h × 12h)';
+
               return (
-                <div key={cuidadora.id} className="flex items-center gap-2">
-                  <span className={`${getCor(cuidadora)} inline-flex items-center justify-center w-6 h-6 rounded text-sm font-bold`}>
-                    {quantidade}
-                  </span>
-                  <span className="text-sm text-gray-800">
-                    <span className="font-semibold">{cuidadora.nome}</span> · {Math.round(totalHoras)}h
-                  </span>
+                <div
+                  key={cuidadora.id}
+                  className={`${getCor(cuidadora)} rounded-lg p-4 shadow-sm`}
+                >
+                  <div className="font-bold text-lg mb-2">{cuidadora.nome}</div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span>📅 Plantões no mês:</span>
+                      <span className="font-bold text-lg">{quantidadePlantoes}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>⏱️ Horas totais:</span>
+                      <span className="font-bold text-lg">{Math.round(totalHoras)}h</span>
+                    </div>
+                    <div className="pt-2 border-t border-current/20 text-xs opacity-75">
+                      <div>🕕 Horário: {horarioStr}</div>
+                      <div>⌛ Duração: {duracaoStr}</div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -231,29 +233,21 @@ export default function CalendarioPage() {
         </div>
 
         {/* Seletor do mês */}
-        <div className="flex items-center justify-center gap-2 md:gap-3 mb-1">
+        <div className="flex items-center justify-center gap-3 md:gap-4 mb-3">
           <button
             onClick={mesAnterior}
             className="p-1.5 md:p-2 hover:bg-white rounded transition"
-            aria-label="Mês anterior"
           >
             <ChevronLeft size={24} />
           </button>
           <h2 className="text-base md:text-xl font-bold text-gray-900 md:min-w-56 text-center capitalize">
-            {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+            Calendário - {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
           </h2>
           <button
             onClick={proximoMes}
             className="p-1.5 md:p-2 hover:bg-white rounded transition"
-            aria-label="Próximo mês"
           >
             <ChevronRight size={24} />
-          </button>
-          <button
-            onClick={irParaHoje}
-            className="ml-2 px-3 py-1.5 text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 rounded transition"
-          >
-            Hoje
           </button>
         </div>
 
