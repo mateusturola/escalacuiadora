@@ -288,36 +288,18 @@ export default function CalendarioPage() {
   const ListaView = () => {
     const destaque = plantaoAtual ?? proximosPlantoes[0];
     const cuidadoraDestaque = destaque ? getCuidadoraPorNome(destaque.cuidadora) : undefined;
-    const ehAgora = !!plantaoAtual;
-    const rotuloDestaque = ehAgora
-      ? 'Agora'
-      : destaque && rotuloDiaRelativo(new Date(destaque.inicioMs)) === 'Hoje'
-        ? 'Próximo · hoje'
-        : 'Próximo plantão';
     return (
       <div className="space-y-5">
-        {/* Quem está agora ou próximo */}
+        {/* Quem está hoje */}
         <Card className={`p-5 md:p-6 ${destaque ? corPill(cuidadoraDestaque) : 'bg-white'} border-2`}>
           <p className="text-xs md:text-sm font-bold uppercase tracking-wider opacity-80">
-            {rotuloDestaque}
+            Hoje
           </p>
           {destaque && cuidadoraDestaque ? (
-            <>
-              <div className="flex items-center gap-3 mt-2">
-                <span className={`inline-block w-4 h-4 rounded-full ${corPontinho(cuidadoraDestaque)}`}></span>
-                <h2 className="text-3xl md:text-4xl font-bold">{cuidadoraDestaque.nome}</h2>
-              </div>
-              <p className="mt-2 text-base md:text-lg opacity-90">
-                {ehAgora
-                  ? `Plantão até ${rotuloFim(destaque.fimMs, destaque.inicioMs)}`
-                  : `Começa ${rotuloDiaRelativo(new Date(destaque.inicioMs)).toLowerCase()} às ${formatarHora(destaque.inicioMs)} · vai até ${rotuloFim(destaque.fimMs, destaque.inicioMs)}`}
-              </p>
-              {cuidadoraDestaque.telefone && (
-                <p className="mt-1 text-sm md:text-base opacity-80">
-                  Telefone: {cuidadoraDestaque.telefone}
-                </p>
-              )}
-            </>
+            <div className="flex items-center gap-3 mt-2">
+              <span className={`inline-block w-4 h-4 rounded-full ${corPontinho(cuidadoraDestaque)}`}></span>
+              <h2 className="text-3xl md:text-4xl font-bold">{cuidadoraDestaque.nome}</h2>
+            </div>
           ) : (
             <p className="mt-2 text-xl md:text-2xl font-semibold text-gray-600">
               Sem plantões cadastrados
