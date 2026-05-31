@@ -3,7 +3,7 @@ const path = require('path');
 
 const CORTE_ISO = '2026-06-01T18:00:00';
 const FIM_ISO   = '2027-05-31T18:00:00';
-const ROTACAO = ['Cuidadora 1', 'Janaina', 'Lucia'];
+const ROTACAO = ['Marcilene', 'Janaina', 'Lucia'];
 
 const arquivo = path.join(__dirname, '..', 'public', 'agendamento.json');
 const dados = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
