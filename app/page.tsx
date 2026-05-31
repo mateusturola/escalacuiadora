@@ -29,15 +29,6 @@ interface PlantaoParsed extends Plantao {
   fimMs: number;
 }
 
-interface ShiftPosicionado extends PlantaoParsed {
-  startOffsetDias: number;
-  endOffsetDias: number;
-  leftPct: number;
-  widthPct: number;
-  recortadoEsquerda: boolean;
-  recortadoDireita: boolean;
-}
-
 const corPill = (cuidadora?: Cuidadora) => {
   if (!cuidadora) return 'bg-gray-200 text-gray-800 ring-gray-300';
   switch (cuidadora.cor) {
@@ -137,25 +128,6 @@ export default function CalendarioPage() {
     return out;
   }, [dias]);
 
-  const cuidadorasVisiveis = useMemo(() => {
-    if (dias.length === 0) return [];
-    const inicioVisivelMs = new Date(
-      dias[0].getFullYear(),
-      dias[0].getMonth(),
-      dias[0].getDate(),
-    ).getTime();
-    const fimVisivelMs = inicioVisivelMs + dias.length * DIA_MS;
-    const nomesComShift = new Set(
-      plantoesParsed
-        .filter(p => p.inicioMs < fimVisivelMs && p.fimMs > inicioVisivelMs)
-        .map(p => p.cuidadora),
-    );
-    return cuidadoras.filter(c => nomesComShift.has(c.nome));
-  }, [dias, plantoesParsed, cuidadoras]);
-
-  const laneDe = (nome: string) =>
-    cuidadorasVisiveis.findIndex(c => c.nome === nome);
-
   const hoje = new Date();
   const isHoje = (d: Date) => d.toDateString() === hoje.toDateString();
   const isDoMes = (d: Date) =>
@@ -189,127 +161,81 @@ export default function CalendarioPage() {
     );
   }
 
-  const ALTURA_HEADER_DIA = 24;
-  const ALTURA_FAIXA = 22;
-  const GAP_FAIXA = 0;
-  const PADDING_BOT = 2;
+  const mesmoDia = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
 
-  const Semana = ({ semana }: { semana: Date[] }) => {
-    const inicioSemanaMs = new Date(
-      semana[0].getFullYear(),
-      semana[0].getMonth(),
-      semana[0].getDate(),
-    ).getTime();
-    const fimSemanaMs = inicioSemanaMs + 7 * DIA_MS;
+  const formatarHoraCurta = (ms: number) => {
+    const d = new Date(ms);
+    const h = d.getHours();
+    const m = d.getMinutes();
+    return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`;
+  };
 
-    const shiftsNaSemana: (ShiftPosicionado & { lane: number })[] = plantoesParsed
-      .filter(p => p.inicioMs < fimSemanaMs && p.fimMs > inicioSemanaMs)
-      .map(p => {
-        const startMs = Math.max(p.inicioMs, inicioSemanaMs);
-        const endMs = Math.min(p.fimMs, fimSemanaMs);
-        const recortadoEsquerda = startMs > p.inicioMs;
-        const recortadoDireita = endMs < p.fimMs;
-
-        // Snap to half-day: start at middle of start-day, end at middle of end-day.
-        // For clipped sides, anchor to the week edge instead.
-        const startOffsetDias = recortadoEsquerda
-          ? 0
-          : Math.floor((startMs - inicioSemanaMs) / DIA_MS) + 0.5;
-        const endOffsetDias = recortadoDireita
-          ? 7
-          : Math.floor((endMs - 1 - inicioSemanaMs) / DIA_MS) + 0.5;
-
-        return {
-          ...p,
-          startOffsetDias,
-          endOffsetDias,
-          leftPct: (startOffsetDias / 7) * 100,
-          widthPct: ((endOffsetDias - startOffsetDias) / 7) * 100,
-          recortadoEsquerda,
-          recortadoDireita,
-          lane: laneDe(p.cuidadora),
-        };
-      })
-      .filter(s => s.lane >= 0);
-
-    const totalFaixas = cuidadorasVisiveis.length;
-    const alturaFaixas = totalFaixas > 0
-      ? totalFaixas * ALTURA_FAIXA + (totalFaixas - 1) * GAP_FAIXA + PADDING_BOT
-      : 0;
-    const alturaSemana = ALTURA_HEADER_DIA + Math.max(alturaFaixas, 70);
+  const Dia = ({ d }: { d: Date }) => {
+    const doMes = isDoMes(d);
+    const ehHoje = isHoje(d);
+    const entra = plantoesParsed.find(p => mesmoDia(new Date(p.inicioMs), d));
+    const sai = plantoesParsed.find(p => mesmoDia(new Date(p.fimMs), d));
+    const cEntra = entra ? getCuidadoraPorNome(entra.cuidadora) : undefined;
+    const cSai = sai ? getCuidadoraPorNome(sai.cuidadora) : undefined;
 
     return (
       <div
-        className="relative border-b border-gray-200"
-        style={{ height: alturaSemana }}
+        className={[
+          'border-r border-b border-gray-200 last:border-r-0 p-1.5 md:p-2 flex flex-col gap-1 min-h-[88px] md:min-h-[100px]',
+          !doMes ? 'bg-gray-50/60' : 'bg-white',
+        ].join(' ')}
       >
-        {/* Day-number row */}
-        <div className="grid grid-cols-7 absolute inset-0 pointer-events-none">
-          {semana.map((d, i) => {
-            const doMes = isDoMes(d);
-            const ehHoje = isHoje(d);
-            return (
-              <div
-                key={i}
-                className={[
-                  'border-r border-gray-200 last:border-r-0 pl-2 pt-1',
-                  !doMes ? 'bg-gray-50/60' : '',
-                ].join(' ')}
-              >
-                {ehHoje ? (
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold shadow">
-                    {d.getDate()}
-                  </span>
-                ) : (
-                  <span
-                    className={[
-                      'text-sm font-semibold',
-                      doMes ? 'text-gray-800' : 'text-gray-400',
-                    ].join(' ')}
-                  >
-                    {d.getDate()}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+        <div className="flex items-center justify-between">
+          {ehHoje ? (
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold shadow">
+              {d.getDate()}
+            </span>
+          ) : (
+            <span
+              className={[
+                'text-sm font-semibold',
+                doMes ? 'text-gray-800' : 'text-gray-400',
+              ].join(' ')}
+            >
+              {d.getDate()}
+            </span>
+          )}
         </div>
 
-        {/* Bars overlay */}
-        <div
-          className="absolute left-0 right-0 pointer-events-none"
-          style={{ top: ALTURA_HEADER_DIA, bottom: PADDING_BOT }}
-        >
-          {shiftsNaSemana.map(shift => {
-            const cuidadora = getCuidadoraPorNome(shift.cuidadora);
-            const radiusClass =
-              shift.recortadoEsquerda && shift.recortadoDireita ? 'rounded-none'
-              : shift.recortadoEsquerda ? 'rounded-r-full'
-              : shift.recortadoDireita ? 'rounded-l-full'
-              : 'rounded-full';
-            const inicioDate = new Date(shift.inicioMs);
-            const foraDoMes =
-              inicioDate.getMonth() !== mesAtual.getMonth() ||
-              inicioDate.getFullYear() !== mesAtual.getFullYear();
-            return (
-              <div
-                key={`${shift.lane}-${shift.inicio}-${shift.cuidadora}`}
-                className={`absolute h-5 md:h-6 px-3 flex items-center justify-center text-xs md:text-sm font-bold ring-1 shadow-sm ${corPill(cuidadora)} ${radiusClass} ${foraDoMes ? 'opacity-40' : ''}`}
-                style={{
-                  left: `calc(${shift.leftPct}% + 1px)`,
-                  width: `calc(${shift.widthPct}% - 2px)`,
-                  top: shift.lane * (ALTURA_FAIXA + GAP_FAIXA),
-                }}
-                title={`${shift.cuidadora} · ${new Date(shift.inicioMs).toLocaleString('pt-BR')} → ${new Date(shift.fimMs).toLocaleString('pt-BR')}`}
-              >
-                <span className="truncate">{shift.cuidadora}</span>
-              </div>
-            );
-          })}
+        <div className={`flex flex-col gap-1 ${!doMes ? 'opacity-50' : ''}`}>
+          {sai && (
+            <div
+              className={`flex items-center gap-1 text-[10px] md:text-xs font-semibold rounded px-1.5 py-0.5 ${corPill(cSai)}`}
+              title={`Sai ${sai.cuidadora} às ${formatarHoraCurta(sai.fimMs)}`}
+            >
+              <span aria-hidden>↓</span>
+              <span className="truncate">{sai.cuidadora}</span>
+              <span className="ml-auto opacity-70 hidden md:inline">{formatarHoraCurta(sai.fimMs)}</span>
+            </div>
+          )}
+          {entra && (
+            <div
+              className={`flex items-center gap-1 text-[10px] md:text-xs font-semibold rounded px-1.5 py-0.5 ${corPill(cEntra)}`}
+              title={`Entra ${entra.cuidadora} às ${formatarHoraCurta(entra.inicioMs)}`}
+            >
+              <span aria-hidden>↑</span>
+              <span className="truncate">{entra.cuidadora}</span>
+              <span className="ml-auto opacity-70 hidden md:inline">{formatarHoraCurta(entra.inicioMs)}</span>
+            </div>
+          )}
         </div>
       </div>
     );
   };
+
+  const Semana = ({ semana }: { semana: Date[] }) => (
+    <div className="grid grid-cols-7">
+      {semana.map((d, i) => <Dia key={i} d={d} />)}
+    </div>
+  );
 
   const agoraMs = hoje.getTime();
   const plantaoAtual = plantoesParsed.find(
@@ -432,26 +358,30 @@ export default function CalendarioPage() {
   const CalendarioView = () => (
     <div className="space-y-4">
       {/* Legenda */}
-      <div className="flex items-center gap-2 flex-wrap justify-center">
-        <span className="text-sm font-semibold text-gray-700 mr-1">Legenda</span>
-        {cuidadoras.map(cuidadora => {
-          const count = contagemNoMes(cuidadora);
-          if (count === 0) return null;
-          return (
-            <span
-              key={cuidadora.id}
-              className={`inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-0.5 text-sm font-medium ${corLegendaChip(cuidadora)}`}
-            >
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          {cuidadoras.map(cuidadora => {
+            const count = contagemNoMes(cuidadora);
+            if (count === 0) return null;
+            return (
               <span
-                className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${corBadgeNumero(cuidadora)}`}
-                title={`${count} plantões neste mês`}
+                key={cuidadora.id}
+                className={`inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-0.5 text-sm font-medium ${corLegendaChip(cuidadora)}`}
               >
-                {count}
+                <span
+                  className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${corBadgeNumero(cuidadora)}`}
+                  title={`${count} plantões neste mês`}
+                >
+                  {count}
+                </span>
+                {cuidadora.nome}
               </span>
-              {cuidadora.nome}
-            </span>
-          );
-        })}
+            );
+          })}
+        </div>
+        <p className="text-xs text-gray-600">
+          <span className="font-semibold">↓ sai</span> · <span className="font-semibold">↑ entra</span>
+        </p>
       </div>
 
       {/* Month selector */}
