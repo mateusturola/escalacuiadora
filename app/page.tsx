@@ -286,32 +286,41 @@ export default function CalendarioPage() {
   };
 
   const ListaView = () => {
-    const cuidadoraAtual = plantaoAtual ? getCuidadoraPorNome(plantaoAtual.cuidadora) : undefined;
+    const destaque = plantaoAtual ?? proximosPlantoes[0];
+    const cuidadoraDestaque = destaque ? getCuidadoraPorNome(destaque.cuidadora) : undefined;
+    const ehAgora = !!plantaoAtual;
+    const rotuloDestaque = ehAgora
+      ? 'Agora'
+      : destaque && rotuloDiaRelativo(new Date(destaque.inicioMs)) === 'Hoje'
+        ? 'Próximo · hoje'
+        : 'Próximo plantão';
     return (
       <div className="space-y-5">
-        {/* Quem está agora */}
-        <Card className={`p-5 md:p-6 ${plantaoAtual ? corPill(cuidadoraAtual) : 'bg-white'} border-2`}>
+        {/* Quem está agora ou próximo */}
+        <Card className={`p-5 md:p-6 ${destaque ? corPill(cuidadoraDestaque) : 'bg-white'} border-2`}>
           <p className="text-xs md:text-sm font-bold uppercase tracking-wider opacity-80">
-            Agora
+            {rotuloDestaque}
           </p>
-          {plantaoAtual && cuidadoraAtual ? (
+          {destaque && cuidadoraDestaque ? (
             <>
               <div className="flex items-center gap-3 mt-2">
-                <span className={`inline-block w-4 h-4 rounded-full ${corPontinho(cuidadoraAtual)}`}></span>
-                <h2 className="text-3xl md:text-4xl font-bold">{cuidadoraAtual.nome}</h2>
+                <span className={`inline-block w-4 h-4 rounded-full ${corPontinho(cuidadoraDestaque)}`}></span>
+                <h2 className="text-3xl md:text-4xl font-bold">{cuidadoraDestaque.nome}</h2>
               </div>
               <p className="mt-2 text-base md:text-lg opacity-90">
-                Plantão até {rotuloFim(plantaoAtual.fimMs, plantaoAtual.inicioMs)}
+                {ehAgora
+                  ? `Plantão até ${rotuloFim(destaque.fimMs, destaque.inicioMs)}`
+                  : `Começa ${rotuloDiaRelativo(new Date(destaque.inicioMs)).toLowerCase()} às ${formatarHora(destaque.inicioMs)} · vai até ${rotuloFim(destaque.fimMs, destaque.inicioMs)}`}
               </p>
-              {cuidadoraAtual.telefone && (
+              {cuidadoraDestaque.telefone && (
                 <p className="mt-1 text-sm md:text-base opacity-80">
-                  Telefone: {cuidadoraAtual.telefone}
+                  Telefone: {cuidadoraDestaque.telefone}
                 </p>
               )}
             </>
           ) : (
             <p className="mt-2 text-xl md:text-2xl font-semibold text-gray-600">
-              Nenhum plantão no momento
+              Sem plantões cadastrados
             </p>
           )}
         </Card>
@@ -323,7 +332,7 @@ export default function CalendarioPage() {
           </h3>
           <Card className="divide-y divide-gray-200 p-0 gap-0">
             {proximosPlantoes
-              .filter(p => !plantaoAtual || p.inicio !== plantaoAtual.inicio)
+              .filter(p => !destaque || p.inicio !== destaque.inicio)
               .map((p, idx) => {
                 const c = getCuidadoraPorNome(p.cuidadora);
                 const ini = new Date(p.inicioMs);
