@@ -427,12 +427,12 @@ export default function CalendarioPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+        <div className="px-4 py-4 flex items-center justify-between gap-3">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900">Escala de Cuidadoras</h1>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-3 md:px-4 py-4 md:py-6 space-y-5">
+      <main className="px-3 md:px-4 py-4 md:py-6 space-y-5">
         {/* View toggle */}
         <div className="flex justify-center">
           <div className="inline-flex rounded-full bg-white border border-gray-200 p-1 shadow-sm">
@@ -459,7 +459,13 @@ export default function CalendarioPage() {
           </div>
         </div>
 
-        {vista === 'lista' ? <ListaView /> : <CalendarioView />}
+        {vista === 'lista' ? (
+          <div className="max-w-3xl mx-auto">
+            <ListaView />
+          </div>
+        ) : (
+          <CalendarioView />
+        )}
       </main>
     </div>
   );
